@@ -34,13 +34,16 @@ export default function ShareCard({
   candidateName, cookedScore, industry, monthsUntilCooked, roastQuote, roastBullets, scoreBreakdown,
 }: ShareCardProps) {
   const cookLevel = cookedScore >= 80 ? "WELL DONE 🔥" : cookedScore >= 60 ? "MEDIUM WELL 🌭" : cookedScore >= 40 ? "MEDIUM 😬" : "RARE 🥩";
-  const ringOffset = 100 - (cookedScore / 100) * 100;
+  const ringR = 46;
+  const ringC = 2 * Math.PI * ringR;
 
   return (
     <div
       id="share-card"
       style={{
         width: 680,
+        maxWidth: "100%",
+        boxSizing: "border-box",
         background: "linear-gradient(145deg, #150800 0%, #2a1100 45%, #180420 100%)",
         borderRadius: 24,
         padding: "36px 40px",
@@ -53,32 +56,71 @@ export default function ShareCard({
       <div style={{ position: "absolute", top: -60, right: -60, width: 260, height: 260, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,107,61,0.18) 0%, transparent 70%)", pointerEvents: "none" }} />
       <div style={{ position: "absolute", bottom: -80, left: -40, width: 220, height: 220, borderRadius: "50%", background: "radial-gradient(circle, rgba(124,108,242,0.12) 0%, transparent 70%)", pointerEvents: "none" }} />
 
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      {/* Header — minWidth/flex keeps badge inside card; brand truncates if needed */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 28, width: "100%", minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: "1 1 0%" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="logo" width={26} height={26} style={{ objectFit: "contain", flexShrink: 0, display: "block" }} />
-          <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, fontWeight: 700, letterSpacing: 1.5 }}>ROASTMYRESUME.FUN</span>
+          <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, fontWeight: 700, letterSpacing: 1.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>ROASTMYRESUME.FUN</span>
         </div>
-        <div style={{ background: "#FF6B3D", color: "white", fontSize: 11, fontWeight: 800, padding: "0 14px", borderRadius: 999, letterSpacing: 1, display: "flex", alignItems: "center", height: 26, gap: 4 }}>
-          {cookLevel.split(" ")[0]}&nbsp;<span style={{ fontSize: 14 }}>{cookLevel.split(" ").slice(1).join(" ")}</span>
+        <div
+          style={{
+            flex: "0 1 auto",
+            maxWidth: "100%",
+            background: "#FF6B3D",
+            color: "white",
+            fontSize: 11,
+            fontWeight: 800,
+            padding: "6px 14px 6px 12px",
+            borderRadius: 999,
+            letterSpacing: 0.8,
+            lineHeight: 1.2,
+            textAlign: "center",
+            whiteSpace: "normal",
+            wordBreak: "break-word",
+          }}
+        >
+          {cookLevel}
         </div>
       </div>
 
       {/* Score + info row */}
       <div style={{ display: "flex", alignItems: "center", gap: 28, marginBottom: 24 }}>
         {/* Ring */}
-        <div style={{ position: "relative", flexShrink: 0 }}>
-          <svg width={110} height={110} style={{ transform: "rotate(-90deg)" }}>
-            <circle cx={55} cy={55} r={46} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={10} />
-            <circle cx={55} cy={55} r={46} fill="none" stroke="#FF6B3D" strokeWidth={10}
-              strokeDasharray={`${2 * Math.PI * 46}`}
-              strokeDashoffset={`${2 * Math.PI * 46 * (1 - cookedScore / 100)}`}
-              strokeLinecap="round" />
+        <div style={{ position: "relative", flexShrink: 0, width: 110, height: 110 }}>
+          {/* SVG <g> rotate (not CSS on &lt;svg&gt;) — html2canvas renders CSS transform on svg incorrectly */}
+          <svg width={110} height={110} viewBox="0 0 110 110" style={{ display: "block" }} aria-hidden>
+            <g transform="rotate(-90 55 55)">
+              <circle cx={55} cy={55} r={ringR} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={10} />
+              <circle
+                cx={55}
+                cy={55}
+                r={ringR}
+                fill="none"
+                stroke="#FF6B3D"
+                strokeWidth={10}
+                strokeDasharray={ringC}
+                strokeDashoffset={ringC * (1 - cookedScore / 100)}
+                strokeLinecap="round"
+              />
+            </g>
           </svg>
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: 110,
+              height: 110,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              pointerEvents: "none",
+            }}
+          >
             <span style={{ fontSize: 28, fontWeight: 900, color: "#FF6B3D", lineHeight: 1 }}>{cookedScore}</span>
-            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>/100</span>
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", lineHeight: 1, marginTop: 3 }}>/100</span>
           </div>
         </div>
 
