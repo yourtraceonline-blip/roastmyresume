@@ -169,7 +169,7 @@ export default function LeaderboardPage() {
                 </div>
                 <div style={{ fontSize: 12, color: "#aaa", marginTop: 2, lineHeight: 1.25 }}>Top {LEADERBOARD_LIST_CAP} · descending disaster</div>
               </div>
-              <div style={{ padding: "8px 0", overflowY: "auto", flex: 1, minHeight: 0 }}>
+              <div className="hide-scrollbar" style={{ padding: "8px 0", overflowY: "auto", flex: 1, minHeight: 0 }}>
                 {mostCooked.map((p, i) => {
                   const isYou = isYourRow(p, myClientId, sessionName);
                   return (
@@ -234,7 +234,7 @@ export default function LeaderboardPage() {
                 </div>
                 <div style={{ fontSize: 12, color: "#aaa", marginTop: 2, lineHeight: 1.25 }}>Top {LEADERBOARD_LIST_CAP} · surviving the apocalypse</div>
               </div>
-              <div style={{ padding: "8px 0", overflowY: "auto", flex: 1, minHeight: 0 }}>
+              <div className="hide-scrollbar" style={{ padding: "8px 0", overflowY: "auto", flex: 1, minHeight: 0 }}>
                 {leastCooked.map((p, i) => {
                   const isYou = isYourRow(p, myClientId, sessionName);
                   return (

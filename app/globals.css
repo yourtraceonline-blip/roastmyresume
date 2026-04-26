@@ -102,6 +102,17 @@ p {
   transition: width 0.5s ease;
 }
 
+/* Scrollable regions that should stay scrollable but hide the bar (Chrome / Firefox / IE) */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .leaderboard-grid {
