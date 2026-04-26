@@ -143,9 +143,16 @@ export async function POST(req: NextRequest) {
     );
     const candidateName = (roastData.candidateName as string) ?? "Friend";
 
-    // One row per browser: delete by client_id when present; else legacy delete by name
+    // One row per browser: delete by client_id when present; else legacy delete by name.
+    // Also remove legacy rows (client_id null) for the same display name so migrating
+    // users do not keep an old duplicate next to their new client_id row.
+    // Skip that for the generic default name so we do not wipe many unrelated "Friend" rows.
+    const genericName = candidateName.trim().toLowerCase() === "friend";
     if (clientId) {
       await supabase.from("roasts").delete().eq("client_id", clientId);
+      if (!genericName) {
+        await supabase.from("roasts").delete().eq("candidate_name", candidateName).is("client_id", null);
+      }
     } else {
       await supabase.from("roasts").delete().eq("candidate_name", candidateName);
     }
