@@ -19,21 +19,13 @@ export default function Navbar() {
           </span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-8">
-          <Link
-            href="/leaderboard"
-            className="text-sm font-medium transition-colors"
-            style={{ color: pathname === "/leaderboard" ? "#FF6B3D" : "#555" }}
-          >
-            Leaderboard
-          </Link>
-          <a href="#how-it-works" className="text-sm font-medium" style={{ color: "#555" }}>
-            How it works
-          </a>
-          <a href="#examples" className="text-sm font-medium" style={{ color: "#555" }}>
-            Examples
-          </a>
-        </div>
+        <Link
+          href="/leaderboard"
+          className="text-sm font-medium transition-colors"
+          style={{ color: pathname === "/leaderboard" ? "#FF6B3D" : "#555" }}
+        >
+          Leaderboard
+        </Link>
 
         <Link href="/upload" className="btn-primary text-sm" style={{ whiteSpace: "nowrap" }}>
           <span className="hidden sm:inline">Roast My Resume →</span>
