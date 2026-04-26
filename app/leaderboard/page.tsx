@@ -207,11 +207,6 @@ export default function LeaderboardPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                       <span style={{ fontWeight: 800, color: "#FF6B3D", fontSize: 15 }}>{p.cooked_score}</span>
                       <span style={{ fontSize: 13 }}>🔥</span>
-                      {isYou && lastResult ? (
-                        <Link href="/result" style={{ fontSize: 11, fontWeight: 700, color: "#FF6B3D", textDecoration: "none", marginLeft: 4 }} title="Open your roast">
-                          View
-                        </Link>
-                      ) : null}
                     </div>
                   </div>
                   );
@@ -277,11 +272,6 @@ export default function LeaderboardPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                       <span style={{ fontWeight: 800, color: "#10B981", fontSize: 15 }}>{p.cooked_score}</span>
                       <span style={{ fontSize: 13 }}>✅</span>
-                      {isYou && lastResult ? (
-                        <Link href="/result" style={{ fontSize: 11, fontWeight: 700, color: "#059669", textDecoration: "none", marginLeft: 4 }} title="Open your roast">
-                          View
-                        </Link>
-                      ) : null}
                     </div>
                   </div>
                   );
