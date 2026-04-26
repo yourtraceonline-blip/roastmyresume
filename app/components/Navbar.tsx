@@ -14,7 +14,7 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 font-bold" style={{ whiteSpace: "nowrap", fontSize: "clamp(11px, 3.5vw, 18px)" }}>
           <Image src="/logo.png" alt="Roast My Resume" width={28} height={28} style={{ objectFit: "contain", flexShrink: 0 }} />
-          <span style={{ color: "#1a1a1a" }}>
+          <span className="hidden sm:inline" style={{ color: "#1a1a1a" }}>
             ROAST <span style={{ color: "#FF6B3D" }}>MY RESUME</span>
           </span>
         </Link>
@@ -27,9 +27,8 @@ export default function Navbar() {
           Leaderboard
         </Link>
 
-        <Link href="/upload" className="btn-primary text-sm" style={{ whiteSpace: "nowrap" }}>
-          <span className="hidden sm:inline">Roast My Resume →</span>
-          <span className="sm:hidden">Roast →</span>
+        <Link href="/upload" className="btn-primary text-sm hidden sm:inline-flex" style={{ whiteSpace: "nowrap" }}>
+          Roast My Resume →
         </Link>
       </div>
     </nav>
