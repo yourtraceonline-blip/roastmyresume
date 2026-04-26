@@ -2,16 +2,9 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-
-const loadingSteps = [
-  "Scanning your resume... 🔍",
-  "Judging your life choices... 😬",
-  "Calculating cooked score... 🔥",
-  "Preparing roast... 💀",
-];
+import RoastLoadingOverlay, { ROAST_LOADING_STEPS } from "../components/RoastLoadingOverlay";
 
 export default function UploadPage() {
   const router = useRouter();
@@ -29,7 +22,7 @@ export default function UploadPage() {
       // Tick through loading messages while the real call runs
       let step = 0;
       const interval = setInterval(() => {
-        step = Math.min(step + 1, loadingSteps.length - 2);
+        step = Math.min(step + 1, ROAST_LOADING_STEPS.length - 2);
         setLoadingStep(step);
       }, 1000);
 
@@ -51,7 +44,7 @@ export default function UploadPage() {
         }
 
         clearInterval(interval);
-        setLoadingStep(loadingSteps.length - 1);
+        setLoadingStep(ROAST_LOADING_STEPS.length - 1);
         sessionStorage.setItem("roastResult", JSON.stringify(data));
         setTimeout(() => router.push("/result"), 500);
       } catch (err) {
@@ -83,31 +76,7 @@ export default function UploadPage() {
   );
 
   if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", background: "#FAF7F2", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24 }}>
-        <Image src="/logo.png" alt="roasting" width={140} height={140} style={{ objectFit: "contain", animation: "float 1.5s ease-in-out infinite" }} />
-        <div style={{ textAlign: "center" }}>
-          <p style={{ fontSize: 20, fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>
-            {loadingSteps[loadingStep]}
-          </p>
-          <p style={{ fontSize: 14, color: "#aaa" }}>This is gonna hurt...</p>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          {loadingSteps.map((_, i) => (
-            <div
-              key={i}
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: "50%",
-                background: i <= loadingStep ? "#FF6B3D" : "#EAE6DF",
-                transition: "background 0.3s",
-              }}
-            />
-          ))}
-        </div>
-      </div>
-    );
+    return <RoastLoadingOverlay step={loadingStep} subtitle="This is gonna hurt..." />;
   }
 
   return (

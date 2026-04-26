@@ -6,6 +6,8 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import CircularProgress from "../components/CircularProgress";
 import ShareCard from "../components/ShareCard";
+import { parseAsteriskBold } from "../../lib/asteriskBold";
+import { SCORE_BREAKDOWN_HINTS } from "../../lib/scoreBreakdownHints";
 
 interface RoastResult {
   cookedScore: number;
@@ -52,24 +54,18 @@ const DEMO: RoastResult = {
   candidateName: "Friend",
 };
 
-const uncookSteps = [
-  { icon: "📚", step: 1, title: "Level up skills", desc: "Learn in-demand skills in your domain." },
-  { icon: "📊", step: 2, title: "Add proof", desc: "Show real impact with numbers." },
-  { icon: "🤖", step: 3, title: "Leverage AI", desc: "Use AI tools to 10x your output." },
-  { icon: "🚀", step: 4, title: "Build & ship", desc: "Work on real projects. Build a portfolio." },
-];
-
 function scoreColor(score: number) {
   if (score >= 70) return "#EF4444";
   if (score >= 45) return "#F59E0B";
   return "#10B981";
 }
 
-function ScoreCard({ label, score }: { label: string; score: number }) {
+function ScoreCard({ label, score, hint }: { label: string; score: number; hint?: string }) {
   const color = scoreColor(score);
   return (
     <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 14, padding: "18px 20px" }}>
-      <div style={{ fontSize: 12, color: "#aaa", marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 12, color: "#888", fontWeight: 700, marginBottom: hint ? 2 : 6 }}>{label}</div>
+      {hint ? <div style={{ fontSize: 11, color: "#aaa", lineHeight: 1.35, marginBottom: 8 }}>{hint}</div> : null}
       <div style={{ fontWeight: 800, fontSize: 28, color, marginBottom: 8 }}>
         {score}<span style={{ fontSize: 13, color: "#ccc", fontWeight: 400 }}>/100</span>
       </div>
@@ -80,12 +76,25 @@ function ScoreCard({ label, score }: { label: string; score: number }) {
   );
 }
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export default function ResultPage() {
   const [result, setResult] = useState<RoastResult | null>(null);
   const [isDemo, setIsDemo] = useState(false);
   const [sharing, setSharingType] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const shareCardRef = useRef<HTMLDivElement>(null);
+  const shareRenderBusyRef = useRef(false);
 
   useEffect(() => {
     const stored = sessionStorage.getItem("roastResult");
@@ -94,60 +103,91 @@ export default function ResultPage() {
     } else { setResult(DEMO); setIsDemo(true); }
   }, []);
 
-  // Generate image blob from the hidden ShareCard
   const generateImageBlob = async (): Promise<Blob | null> => {
-    const html2canvas = (await import("html2canvas")).default;
     const el = shareCardRef.current;
     if (!el) return null;
-    const canvas = await html2canvas(el, { scale: 2.5, backgroundColor: null, useCORS: true, logging: false });
-    return new Promise((res) => canvas.toBlob((b) => res(b), "image/png", 1));
+    if (shareRenderBusyRef.current) return null;
+    shareRenderBusyRef.current = true;
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const rect = el.getBoundingClientRect();
+      // windowHeight must cover rect.top + rect.height so a position:fixed card
+      // sitting at top:N isn't clipped at the bottom of the iframe viewport.
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        backgroundColor: null,
+        useCORS: true,
+        logging: false,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: Math.ceil(rect.width) + 4,
+        windowHeight: Math.ceil(rect.top + rect.height) + 4,
+        // Skip every fixed/sticky element that is NOT the card itself or its
+        // ancestors — prevents the Navbar painting over the card in the clone.
+        ignoreElements: (element: Element) => {
+          if (el === element || el.contains(element) || element.contains(el)) return false;
+          const s = window.getComputedStyle(element as HTMLElement);
+          return s.position === "fixed" || s.position === "sticky";
+        },
+      });
+      return new Promise((res) => canvas.toBlob((b) => res(b), "image/png", 1));
+    } finally {
+      shareRenderBusyRef.current = false;
+    }
   };
 
   const shareText = result ? `I'm ${result.cookedScore}% cooked 💀 Check how cooked YOUR resume is → roastmyresume.fun` : "";
+  const shareTitle = "My Resume Roast";
 
-  // Native share (mobile / desktop supporting Web Share API with files)
+  /** Native share sheet with image + caption when the browser supports it. */
+  const tryNativeShareImageAndText = async (blob: Blob, text: string): Promise<"shared" | "aborted" | "unsupported"> => {
+    const file = new File([blob], "my-roast.png", { type: "image/png" });
+    const data: ShareData = { files: [file], text, title: shareTitle };
+    if (!navigator.canShare?.(data)) return "unsupported";
+    try {
+      await navigator.share(data);
+      return "shared";
+    } catch (e) {
+      const name = (e as Error)?.name;
+      if (name === "AbortError") return "aborted";
+      console.error(e);
+      return "unsupported";
+    }
+  };
+
   const handleNativeShare = async () => {
+    if (sharing || shareRenderBusyRef.current) return;
     setSharingType("native");
     try {
       const blob = await generateImageBlob();
       if (!blob) return;
-      const file = new File([blob], "my-roast.png", { type: "image/png" });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], text: shareText, title: "My Resume Roast" });
-      } else {
-        // Fallback: download
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a"); a.href = url; a.download = "my-roast.png"; a.click();
-        URL.revokeObjectURL(url);
-      }
-    } catch (e) { console.error(e); }
-    setSharingType(null);
+      const outcome = await tryNativeShareImageAndText(blob, shareText);
+      if (outcome === "unsupported") downloadBlob(blob, "my-roast.png");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSharingType(null);
+    }
   };
 
-  // Share image via Web Share API — on mobile opens Twitter/etc with image attached
-  // On desktop: downloads image + opens the platform
   const handlePlatformShare = async (platform: "twitter" | "linkedin") => {
+    if (sharing || shareRenderBusyRef.current) return;
     setSharingType(platform);
     try {
       const blob = await generateImageBlob();
       if (!blob) return;
-      const file = new File([blob], "my-roast.png", { type: "image/png" });
-
-      // Try native share first (works great on mobile — user picks Twitter/LinkedIn from share sheet)
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], text: shareText, title: "My Resume Roast" });
-      } else {
-        // Desktop fallback: download image + open platform
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a"); a.href = url; a.download = "my-roast.png"; a.click();
-        URL.revokeObjectURL(url);
-        const platformUrl = platform === "twitter"
-          ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`
-          : `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(shareText)}`;
-        setTimeout(() => window.open(platformUrl, "_blank"), 600);
-      }
-    } catch (e) { console.error(e); }
-    setSharingType(null);
+      const outcome = await tryNativeShareImageAndText(blob, shareText);
+      if (outcome !== "unsupported") return;
+      downloadBlob(blob, "my-roast.png");
+      const platformUrl = platform === "twitter"
+        ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`
+        : `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(shareText)}`;
+      setTimeout(() => window.open(platformUrl, "_blank"), 600);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSharingType(null);
+    }
   };
 
   const handleCopy = () => {
@@ -162,13 +202,13 @@ export default function ResultPage() {
 
   const cookLabel = r.cookedScore >= 80 ? "Well done 🔥" : r.cookedScore >= 60 ? "Medium well 🌭" : r.cookedScore >= 40 ? "Medium 😬" : "Rare 🥩";
   const breakdown = [
-    { label: "Replaceability", score: r.scoreBreakdown.replaceability },
-    { label: "Skill Depth", score: r.scoreBreakdown.skillDepth },
-    { label: "Market Demand", score: r.scoreBreakdown.marketDemand },
-    { label: "Growth Trajectory", score: r.scoreBreakdown.growthTrajectory },
-    { label: "AI Leverage", score: r.scoreBreakdown.aiLeverage },
-    { label: "Execution", score: r.scoreBreakdown.execution },
-    { label: "Resume Quality", score: r.scoreBreakdown.resumeQuality },
+    { label: "Replaceability", score: r.scoreBreakdown.replaceability, hint: SCORE_BREAKDOWN_HINTS.Replaceability },
+    { label: "Skill Depth", score: r.scoreBreakdown.skillDepth, hint: SCORE_BREAKDOWN_HINTS["Skill Depth"] },
+    { label: "Market Demand", score: r.scoreBreakdown.marketDemand, hint: SCORE_BREAKDOWN_HINTS["Market Demand"] },
+    { label: "Growth Trajectory", score: r.scoreBreakdown.growthTrajectory, hint: SCORE_BREAKDOWN_HINTS["Growth Trajectory"] },
+    { label: "AI Leverage", score: r.scoreBreakdown.aiLeverage, hint: SCORE_BREAKDOWN_HINTS["AI Leverage"] },
+    { label: "Execution", score: r.scoreBreakdown.execution, hint: SCORE_BREAKDOWN_HINTS.Execution },
+    { label: "Resume Quality", score: r.scoreBreakdown.resumeQuality, hint: SCORE_BREAKDOWN_HINTS["Resume Quality"] },
   ];
 
   return (
@@ -267,14 +307,14 @@ export default function ResultPage() {
             </div>
 
             <blockquote style={{ fontSize: 17, fontWeight: 700, color: "#1a1a1a", lineHeight: 1.5, borderLeft: "4px solid #FF6B3D", paddingLeft: 16, margin: "0 0 24px", fontStyle: "italic" }}>
-              &quot;{r.roastQuote}&quot;
+              &quot;{parseAsteriskBold(r.roastQuote)}&quot;
             </blockquote>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
               {r.roastBullets.map((b, i) => (
                 <div key={i} style={{ display: "flex", gap: 10, fontSize: 14, color: "#333", background: i % 2 === 0 ? "#FAF7F2" : "white", padding: "10px 14px", borderRadius: 10, border: "1px solid #EAE6DF" }}>
                   <span style={{ flexShrink: 0 }}>🔥</span>
-                  <span style={{ lineHeight: 1.5 }}>{b}</span>
+                  <span style={{ lineHeight: 1.5 }}>{parseAsteriskBold(b)}</span>
                 </div>
               ))}
             </div>
@@ -283,12 +323,12 @@ export default function ResultPage() {
               <div style={{ fontWeight: 800, fontSize: 13, color: "#FF6B3D", marginBottom: 6, display: "flex", gap: 6, alignItems: "center" }}>
                 💀 The harsh truth
               </div>
-              <p style={{ fontSize: 14, color: "#c0390d", margin: 0, fontWeight: 600, lineHeight: 1.5 }}>{r.harshTruth}</p>
+              <p style={{ fontSize: 14, color: "#c0390d", margin: 0, fontWeight: 600, lineHeight: 1.5 }}>{parseAsteriskBold(r.harshTruth)}</p>
             </div>
 
             <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 12, padding: "16px" }}>
               <div style={{ fontWeight: 800, fontSize: 13, color: "#10B981", marginBottom: 6 }}>✅ Good news?</div>
-              <p style={{ fontSize: 14, color: "#059669", margin: 0, lineHeight: 1.5 }}>{r.goodNews}</p>
+              <p style={{ fontSize: 14, color: "#059669", margin: 0, lineHeight: 1.5 }}>{parseAsteriskBold(r.goodNews)}</p>
             </div>
           </div>
 
@@ -302,7 +342,7 @@ export default function ResultPage() {
                     <span style={{ fontSize: 24, flexShrink: 0 }}>{w.icon}</span>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 14, color: "#1a1a1a" }}>{w.title}</div>
-                      <div style={{ fontSize: 13, color: "#888", marginTop: 3 }}>{w.desc}</div>
+                      <div style={{ fontSize: 13, color: "#888", marginTop: 3 }}>{parseAsteriskBold(w.desc)}</div>
                     </div>
                   </div>
                 ))}
@@ -313,25 +353,25 @@ export default function ResultPage() {
             <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: "24px" }}>
               <div style={{ fontWeight: 800, fontSize: 16, color: "#1a1a1a", marginBottom: 6 }}>📤 Share your roast</div>
               <p style={{ fontSize: 12, color: "#aaa", marginBottom: 14, lineHeight: 1.5 }}>
-                Sharing downloads your roast image + opens the platform so you can attach it.
+                On phones and supported browsers, the buttons open the system share sheet with your roast image and caption. Otherwise we download the image and open the site (text only there).
               </p>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-                <button onClick={() => handlePlatformShare("twitter")} disabled={!!sharing}
+                <button type="button" onClick={() => handlePlatformShare("twitter")} disabled={!!sharing}
                   style={{ padding: "9px 16px", background: "#000", color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: sharing === "twitter" ? 0.7 : 1, display: "flex", alignItems: "center", gap: 6 }}>
                   {sharing === "twitter" ? "⏳" : "𝕏"} Twitter
                 </button>
-                <button onClick={() => handlePlatformShare("linkedin")} disabled={!!sharing}
+                <button type="button" onClick={() => handlePlatformShare("linkedin")} disabled={!!sharing}
                   style={{ padding: "9px 16px", background: "#0077B5", color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: sharing === "linkedin" ? 0.7 : 1 }}>
                   {sharing === "linkedin" ? "⏳ ..." : "LinkedIn"}
                 </button>
-                <button onClick={handleCopy}
+                <button type="button" onClick={handleCopy}
                   style={{ padding: "9px 16px", background: copied ? "#10B981" : "#7C6CF2", color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "background 0.2s" }}>
                   {copied ? "✓ Copied!" : "Copy text"}
                 </button>
               </div>
-              <button onClick={handleNativeShare} disabled={!!sharing}
+              <button type="button" onClick={handleNativeShare} disabled={!!sharing}
                 style={{ width: "100%", padding: "11px", background: "#FAF7F2", border: "2px dashed #EAE6DF", borderRadius: 10, fontSize: 13, fontWeight: 700, color: "#555", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: sharing === "native" ? 0.7 : 1 }}>
-                {sharing === "native" ? "⏳ Generating..." : "🖼 Share / Download Image"}
+                {sharing === "native" ? "⏳ Generating..." : "🖼 Share / download image"}
               </button>
             </div>
           </div>
@@ -351,37 +391,35 @@ export default function ResultPage() {
           </div>
         </div>
 
-        {/* ── HOW TO UN-COOK ── */}
-        <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: "28px", marginBottom: 24 }}>
-          <div style={{ fontWeight: 800, fontSize: 18, color: "#1a1a1a", marginBottom: 6 }}>🔧 How to un-cook yourself</div>
-          <p style={{ color: "#aaa", fontSize: 13, marginBottom: 28 }}>Actionable steps to improve your score and future-proof your career.</p>
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 0 }}>
-            {uncookSteps.map((s, i) => (
-              <div key={s.step} style={{ display: "flex", alignItems: "center", flex: "1 1 160px" }}>
-                <div style={{ textAlign: "center", flex: 1, padding: "0 8px" }}>
-                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#F0EEFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, margin: "0 auto 10px" }}>{s.icon}</div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: "#1a1a1a" }}>{s.step}. {s.title}</div>
-                  <div style={{ fontSize: 12, color: "#aaa", marginTop: 3 }}>{s.desc}</div>
-                </div>
-                {i < uncookSteps.length - 1 && <div style={{ fontSize: 18, color: "#ddd", flexShrink: 0 }}>→</div>}
-              </div>
-            ))}
-          </div>
+        <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: "32px 28px", marginBottom: 24, textAlign: "center" }}>
+          <p style={{ fontSize: 17, fontWeight: 700, color: "#1a1a1a", margin: "0 0 14px" }}>Follow my work :)</p>
+          <a
+            href="https://tarat.space"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: 16, fontWeight: 700, color: "#FF6B3D", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8 }}
+          >
+            <span aria-hidden>🌱</span>
+            tarat.space
+            <span style={{ fontWeight: 500, color: "#888", fontSize: 14 }}>— digital garden</span>
+          </a>
         </div>
 
-        {/* ── HIDDEN SHARE CARD (captured by html2canvas) ── */}
-        <div style={{ position: "fixed", left: -9999, top: 0, pointerEvents: "none" }}>
-          <div ref={shareCardRef}>
-            <ShareCard
-              candidateName={r.candidateName}
-              cookedScore={r.cookedScore}
-              industry={r.industry}
-              monthsUntilCooked={r.monthsUntilCooked}
-              roastQuote={r.roastQuote}
-              roastBullets={r.roastBullets}
-              scoreBreakdown={r.scoreBreakdown}
-            />
-          </div>
+        {/* Hidden share card — fixed below any sticky navbar so the navbar never paints over it in the html2canvas clone */}
+        <div
+          aria-hidden
+          style={{ position: "fixed", left: 0, top: 80, width: 680, opacity: 0, pointerEvents: "none" }}
+        >
+          <ShareCard
+            ref={shareCardRef}
+            candidateName={r.candidateName}
+            cookedScore={r.cookedScore}
+            industry={r.industry}
+            monthsUntilCooked={r.monthsUntilCooked}
+            roastQuote={r.roastQuote}
+            roastBullets={r.roastBullets}
+            scoreBreakdown={r.scoreBreakdown}
+          />
         </div>
 
         {/* ── CTA ── */}

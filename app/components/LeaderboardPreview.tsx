@@ -3,20 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import CircularProgress from "./CircularProgress";
 import { supabase } from "../../lib/supabase";
-
-const avatarColors = [
-  "#FF6B3D", "#7C6CF2", "#2DD4BF", "#F59E0B", "#EF4444",
-  "#8B5CF6", "#EC4899", "#10B981",
-];
-
-function Avatar({ name, index }: { name: string; index: number }) {
-  const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-  return (
-    <div style={{ width: 32, height: 32, borderRadius: "50%", background: avatarColors[index % avatarColors.length], display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
-      {initials}
-    </div>
-  );
-}
+import { podiumRankContent, podiumRankIsMedal } from "../../lib/podiumRank";
 
 interface Row { id: string; candidate_name: string; cooked_score: number; industry: string; }
 
@@ -51,7 +38,7 @@ export default function LeaderboardPreview() {
 
   return (
     <section className="max-w-6xl mx-auto px-6 py-16" id="examples">
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
         <div>
           <h2 style={{ fontSize: 28, fontWeight: 800, color: "#1a1a1a", marginBottom: 4 }}>
             🏆 Leaderboard
@@ -60,7 +47,11 @@ export default function LeaderboardPreview() {
             {total > 0 ? `${total} people roasted so far` : "See how cooked everyone is"}
           </p>
         </div>
-        <Link href="/leaderboard" style={{ color: "#FF6B3D", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>
+        <Link
+          href="/leaderboard"
+          className="w-fit shrink-0 text-sm font-semibold no-underline hover:underline"
+          style={{ color: "#FF6B3D" }}
+        >
           View full leaderboard →
         </Link>
       </div>
@@ -71,18 +62,32 @@ export default function LeaderboardPreview() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Most Cooked */}
           <div className="card p-6">
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-              <span style={{ fontSize: 20 }}>🔥</span>
-              <div>
-                <div style={{ fontWeight: 700, color: "#1a1a1a" }}>Most Cooked</div>
-                <div style={{ fontSize: 12, color: "#aaa" }}>Top 5 most cooked people</div>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, lineHeight: 1 }}>
+                <span style={{ fontWeight: 700, color: "#1a1a1a", fontSize: 16 }}>Most Cooked</span>
+                <span style={{ fontSize: 18, lineHeight: 1 }} aria-hidden>🔥</span>
               </div>
+              <div style={{ fontSize: 12, color: "#aaa", marginTop: 2, lineHeight: 1.25 }}>Top 5 most cooked people</div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {mostCooked.map((p, i) => (
                 <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ width: 20, textAlign: "center", fontWeight: 700, color: "#aaa", fontSize: 13 }}>{i + 1}</span>
-                  <Avatar name={p.candidate_name} index={i} />
+                  <span
+                    aria-label={`Rank ${i + 1}`}
+                    style={{
+                      width: 24,
+                      flexShrink: 0,
+                      textAlign: "left",
+                      fontWeight: 700,
+                      color: podiumRankIsMedal(i) ? undefined : "#aaa",
+                      fontSize: podiumRankIsMedal(i) ? 17 : 13,
+                      lineHeight: 1,
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    {podiumRankContent(i)}
+                  </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 13, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.candidate_name}</div>
                     <div style={{ fontSize: 11, color: "#aaa", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.industry}</div>
@@ -98,18 +103,32 @@ export default function LeaderboardPreview() {
 
           {/* Least Cooked */}
           <div className="card p-6">
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-              <span style={{ fontSize: 20 }}>😎</span>
-              <div>
-                <div style={{ fontWeight: 700, color: "#1a1a1a" }}>Least Cooked</div>
-                <div style={{ fontSize: 12, color: "#aaa" }}>Top 5 least cooked people</div>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, lineHeight: 1 }}>
+                <span style={{ fontWeight: 700, color: "#1a1a1a", fontSize: 16 }}>Least Cooked</span>
+                <span style={{ fontSize: 18, lineHeight: 1 }} aria-hidden>😎</span>
               </div>
+              <div style={{ fontSize: 12, color: "#aaa", marginTop: 4, lineHeight: 1.25 }}>Top 5 least cooked people</div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {leastCooked.map((p, i) => (
                 <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ width: 20, textAlign: "center", fontWeight: 700, color: "#aaa", fontSize: 13 }}>{i + 1}</span>
-                  <Avatar name={p.candidate_name} index={i + 5} />
+                  <span
+                    aria-label={`Rank ${i + 1}`}
+                    style={{
+                      width: 24,
+                      flexShrink: 0,
+                      textAlign: "left",
+                      fontWeight: 700,
+                      color: podiumRankIsMedal(i) ? undefined : "#aaa",
+                      fontSize: podiumRankIsMedal(i) ? 17 : 13,
+                      lineHeight: 1,
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    {podiumRankContent(i)}
+                  </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 13, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.candidate_name}</div>
                     <div style={{ fontSize: 11, color: "#aaa", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.industry}</div>

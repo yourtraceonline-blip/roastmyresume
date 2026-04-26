@@ -1,38 +1,30 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import CircularProgress from "../components/CircularProgress";
 import { supabase } from "../../lib/supabase";
+import { getClientId } from "../../lib/clientId";
+import { podiumRankContent, podiumRankIsMedal } from "../../lib/podiumRank";
 
 interface RoastRow {
   id: string;
   created_at: string;
   candidate_name: string;
+  client_id?: string | null;
   cooked_score: number;
   industry: string;
   industry_rank: number;
   months_until_cooked: number;
 }
 
-const avatarColors = [
-  "#FF6B3D", "#7C6CF2", "#2DD4BF", "#F59E0B", "#EF4444",
-  "#8B5CF6", "#EC4899", "#10B981", "#3B82F6", "#F97316",
-];
-
-function Avatar({ name, index, size = 36 }: { name: string; index: number; size?: number }) {
-  const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-  return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: avatarColors[index % avatarColors.length], display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: size * 0.33, fontWeight: 700, flexShrink: 0 }}>
-      {initials}
-    </div>
-  );
-}
+/** Max rows per column; fetch pool must be large enough to fill both after filters */
+const LEADERBOARD_LIST_CAP = 100;
+const LEADERBOARD_FETCH_CAP = 1000;
 
 const industryTabs = ["Global", "Tech", "Design", "Finance", "Marketing", "Product"];
-const timeFilters = ["This Month", "All Time"];
 
 const industryKeywords: Record<string, string[]> = {
   Tech: ["software", "engineer", "developer", "data", "ml", "ai", "devops", "cloud", "security", "frontend", "backend", "full"],
@@ -50,15 +42,30 @@ function filterByTab(rows: RoastRow[], tab: string) {
   );
 }
 
+/** Highlight row for this browser (stored client_id) or legacy rows matched by session name only */
+function isYourRow(row: RoastRow, myClientId: string | null, sessionCandidateName: string | null) {
+  const rowClient = row.client_id ?? null;
+  if (myClientId && rowClient === myClientId) return true;
+  if (!rowClient && sessionCandidateName?.trim()) {
+    return row.candidate_name.trim().toLowerCase() === sessionCandidateName.trim().toLowerCase();
+  }
+  return false;
+}
+
 export default function LeaderboardPage() {
   const [activeTab, setActiveTab] = useState("Global");
-  const [activeTime, setActiveTime] = useState("This Month");
   const [allRows, setAllRows] = useState<RoastRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [exactRank, setExactRank] = useState<number | null>(null);
   const [exactTotal, setExactTotal] = useState<number | null>(null);
 
-  // Last roast from this session
+  const myClientId = useSyncExternalStore(
+    () => () => {},
+    () => getClientId(),
+    () => null,
+  );
+
+  // Last roast from this session (sidebar + legacy name highlight)
   const lastResult = typeof window !== "undefined" ? (() => {
     try { return JSON.parse(sessionStorage.getItem("roastResult") ?? "null"); } catch { return null; }
   })() : null;
@@ -66,43 +73,28 @@ export default function LeaderboardPage() {
   useEffect(() => {
     async function load() {
       setLoading(true);
-      let query = supabase
+      const { data, error } = await supabase
         .from("roasts")
-        .select("id, created_at, candidate_name, cooked_score, industry, industry_rank, months_until_cooked")
-        .order("created_at", { ascending: false });
-
-      if (activeTime === "This Month") {
-        const start = new Date();
-        start.setDate(1); start.setHours(0, 0, 0, 0);
-        query = query.gte("created_at", start.toISOString());
-      }
-
-      const { data, error } = await query.limit(200);
+        .select("id, created_at, candidate_name, client_id, cooked_score, industry, industry_rank, months_until_cooked")
+        .order("created_at", { ascending: false })
+        .limit(LEADERBOARD_FETCH_CAP);
       if (!error && data) setAllRows(data);
       setLoading(false);
     }
     load();
-  }, [activeTime]);
+  }, []);
 
   // Compute user's exact rank server-side so it's accurate even with thousands of entries
   useEffect(() => {
     if (!lastResult) return;
     async function loadRank() {
-      let rankQuery = supabase
+      const rankQuery = supabase
         .from("roasts")
         .select("*", { count: "exact", head: true })
         .gt("cooked_score", lastResult.cookedScore);
-      let totalQuery = supabase
+      const totalQuery = supabase
         .from("roasts")
         .select("*", { count: "exact", head: true });
-
-      if (activeTime === "This Month") {
-        const start = new Date();
-        start.setDate(1); start.setHours(0, 0, 0, 0);
-        const iso = start.toISOString();
-        rankQuery = rankQuery.gte("created_at", iso);
-        totalQuery = totalQuery.gte("created_at", iso);
-      }
 
       const [{ count: above }, { count: total }] = await Promise.all([rankQuery, totalQuery]);
       setExactRank((above ?? 0) + 1);
@@ -110,12 +102,13 @@ export default function LeaderboardPage() {
     }
     loadRank();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTime, lastResult?.cookedScore]);
+  }, [lastResult?.cookedScore]);
 
   const filtered = filterByTab(allRows, activeTab);
-  const mostCooked = [...filtered].filter((r) => r.cooked_score >= 50).sort((a, b) => b.cooked_score - a.cooked_score).slice(0, 10);
-  const leastCooked = [...filtered].filter((r) => r.cooked_score < 50).sort((a, b) => a.cooked_score - b.cooked_score).slice(0, 10);
+  const mostCooked = [...filtered].filter((r) => r.cooked_score >= 50).sort((a, b) => b.cooked_score - a.cooked_score).slice(0, LEADERBOARD_LIST_CAP);
+  const leastCooked = [...filtered].filter((r) => r.cooked_score < 50).sort((a, b) => a.cooked_score - b.cooked_score).slice(0, LEADERBOARD_LIST_CAP);
   const avgScore = filtered.length ? Math.round(filtered.reduce((s, r) => s + r.cooked_score, 0) / filtered.length) : 0;
+  const sessionName = typeof lastResult?.candidateName === "string" ? lastResult.candidateName : null;
 
   return (
     <div style={{ background: "#FAF7F2", minHeight: "100vh" }}>
@@ -123,22 +116,13 @@ export default function LeaderboardPage() {
 
       <div className="max-w-6xl mx-auto px-6 py-10">
         {/* Header */}
-        <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
-          <div>
-            <h1 style={{ fontSize: "clamp(2rem, 4vw, 2.6rem)", fontWeight: 800, color: "#1a1a1a", marginBottom: 6, display: "flex", alignItems: "center", gap: 10 }}>
-              Leaderboard <span style={{ fontSize: 32 }}>🏆</span>
-            </h1>
-            <p style={{ color: "#888", fontSize: 15 }}>
-              {filtered.length > 0 ? `${filtered.length} roasts ${activeTime === "This Month" ? "this month" : "all time"}` : "See how cooked everyone is"}
-            </p>
-          </div>
-          <select
-            value={activeTime}
-            onChange={(e) => setActiveTime(e.target.value)}
-            style={{ padding: "8px 14px", border: "1px solid #EAE6DF", borderRadius: 10, background: "white", fontSize: 13, fontWeight: 600, color: "#555", cursor: "pointer" }}
-          >
-            {timeFilters.map((f) => <option key={f}>{f}</option>)}
-          </select>
+        <div className="mb-8">
+          <h1 style={{ fontSize: "clamp(2rem, 4vw, 2.6rem)", fontWeight: 800, color: "#1a1a1a", marginBottom: 6, display: "flex", alignItems: "center", gap: 10 }}>
+            Leaderboard <span style={{ fontSize: 32 }}>🏆</span>
+          </h1>
+          <p style={{ color: "#888", fontSize: 15 }}>
+            {filtered.length > 0 ? `${filtered.length} roasts` : "See how cooked everyone is"}
+          </p>
         </div>
 
         {/* Tabs */}
@@ -166,58 +150,142 @@ export default function LeaderboardPage() {
           <div className="leaderboard-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 320px", gap: 24 }}>
 
             {/* Most Cooked */}
-            <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, overflow: "hidden" }}>
-              <div style={{ padding: "20px 24px", borderBottom: "1px solid #EAE6DF", display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 20 }}>🔥</span>
-                <div>
-                  <div style={{ fontWeight: 700, color: "#1a1a1a" }}>Most Cooked</div>
-                  <div style={{ fontSize: 12, color: "#aaa" }}>Descending disaster</div>
+            <div
+              style={{
+                background: "white",
+                border: "1px solid #EAE6DF",
+                borderRadius: 20,
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+                maxHeight: "min(520px, 62vh)",
+                minHeight: 0,
+              }}
+            >
+              <div style={{ padding: "20px 24px", borderBottom: "1px solid #EAE6DF", flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, lineHeight: 1 }}>
+                  <span style={{ fontWeight: 700, color: "#1a1a1a", fontSize: 16 }}>Most Cooked</span>
+                  <span style={{ fontSize: 18, lineHeight: 1 }} aria-hidden>🔥</span>
                 </div>
+                <div style={{ fontSize: 12, color: "#aaa", marginTop: 2, lineHeight: 1.25 }}>Top {LEADERBOARD_LIST_CAP} · descending disaster</div>
               </div>
-              <div style={{ padding: "8px 0" }}>
-                {mostCooked.map((p, i) => (
+              <div style={{ padding: "8px 0", overflowY: "auto", flex: 1, minHeight: 0 }}>
+                {mostCooked.map((p, i) => {
+                  const isYou = isYourRow(p, myClientId, sessionName);
+                  return (
                   <div key={p.id}
-                    style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 24px", borderBottom: i < mostCooked.length - 1 ? "1px solid #FAF7F2" : "none" }}>
-                    <span style={{ width: 22, textAlign: "center", fontWeight: 700, color: i < 3 ? "#FF6B3D" : "#ccc", fontSize: 13, flexShrink: 0 }}>{i + 1}</span>
-                    <Avatar name={p.candidate_name} index={i} />
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "10px 14px",
+                      borderBottom: i < mostCooked.length - 1 ? "1px solid #FAF7F2" : "none",
+                      background: isYou ? "rgba(255, 107, 61, 0.1)" : undefined,
+                      boxShadow: isYou ? "inset 3px 0 0 #FF6B3D" : undefined,
+                    }}>
+                    <span
+                      aria-label={`Rank ${i + 1}`}
+                      style={{
+                        width: 26,
+                        flexShrink: 0,
+                        textAlign: "left",
+                        fontWeight: 700,
+                        fontVariantNumeric: "tabular-nums",
+                        color: podiumRankIsMedal(i) ? undefined : "#ccc",
+                        fontSize: podiumRankIsMedal(i) ? 17 : 13,
+                        lineHeight: 1,
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      {podiumRankContent(i)}
+                    </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.candidate_name}</div>
+                      <div style={{ fontWeight: isYou ? 800 : 600, fontSize: 13, color: isYou ? "#FF6B3D" : "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.candidate_name}</div>
                       <div style={{ fontSize: 11, color: "#aaa", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.industry}</div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                       <span style={{ fontWeight: 800, color: "#FF6B3D", fontSize: 15 }}>{p.cooked_score}</span>
                       <span style={{ fontSize: 13 }}>🔥</span>
+                      {isYou && lastResult ? (
+                        <Link href="/result" style={{ fontSize: 11, fontWeight: 700, color: "#FF6B3D", textDecoration: "none", marginLeft: 4 }} title="Open your roast">
+                          View
+                        </Link>
+                      ) : null}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
             {/* Least Cooked */}
-            <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, overflow: "hidden" }}>
-              <div style={{ padding: "20px 24px", borderBottom: "1px solid #EAE6DF", display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 20 }}>😎</span>
-                <div>
-                  <div style={{ fontWeight: 700, color: "#1a1a1a" }}>Least Cooked</div>
-                  <div style={{ fontSize: 12, color: "#aaa" }}>Surviving the AI apocalypse</div>
+            <div
+              style={{
+                background: "white",
+                border: "1px solid #EAE6DF",
+                borderRadius: 20,
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+                maxHeight: "min(520px, 62vh)",
+                minHeight: 0,
+              }}
+            >
+              <div style={{ padding: "20px 24px", borderBottom: "1px solid #EAE6DF", flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, lineHeight: 1 }}>
+                  <span style={{ fontWeight: 700, color: "#1a1a1a", fontSize: 16 }}>Least Cooked</span>
+                  <span style={{ fontSize: 18, lineHeight: 1 }} aria-hidden>😎</span>
                 </div>
+                <div style={{ fontSize: 12, color: "#aaa", marginTop: 2, lineHeight: 1.25 }}>Top {LEADERBOARD_LIST_CAP} · surviving the apocalypse</div>
               </div>
-              <div style={{ padding: "8px 0" }}>
-                {leastCooked.map((p, i) => (
+              <div style={{ padding: "8px 0", overflowY: "auto", flex: 1, minHeight: 0 }}>
+                {leastCooked.map((p, i) => {
+                  const isYou = isYourRow(p, myClientId, sessionName);
+                  return (
                   <div key={p.id}
-                    style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 24px", borderBottom: i < leastCooked.length - 1 ? "1px solid #FAF7F2" : "none" }}>
-                    <span style={{ width: 22, textAlign: "center", fontWeight: 700, color: i < 3 ? "#10B981" : "#ccc", fontSize: 13, flexShrink: 0 }}>{i + 1}</span>
-                    <Avatar name={p.candidate_name} index={i + 3} />
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "10px 14px",
+                      borderBottom: i < leastCooked.length - 1 ? "1px solid #FAF7F2" : "none",
+                      background: isYou ? "rgba(16, 185, 129, 0.1)" : undefined,
+                      boxShadow: isYou ? "inset 3px 0 0 #10B981" : undefined,
+                    }}>
+                    <span
+                      aria-label={`Rank ${i + 1}`}
+                      style={{
+                        width: 26,
+                        flexShrink: 0,
+                        textAlign: "left",
+                        fontWeight: 700,
+                        fontVariantNumeric: "tabular-nums",
+                        color: podiumRankIsMedal(i) ? undefined : "#ccc",
+                        fontSize: podiumRankIsMedal(i) ? 17 : 13,
+                        lineHeight: 1,
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      {podiumRankContent(i)}
+                    </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.candidate_name}</div>
+                      <div style={{ fontWeight: isYou ? 800 : 600, fontSize: 13, color: isYou ? "#059669" : "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.candidate_name}</div>
                       <div style={{ fontSize: 11, color: "#aaa", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.industry}</div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
                       <span style={{ fontWeight: 800, color: "#10B981", fontSize: 15 }}>{p.cooked_score}</span>
                       <span style={{ fontSize: 13 }}>✅</span>
+                      {isYou && lastResult ? (
+                        <Link href="/result" style={{ fontSize: 11, fontWeight: 700, color: "#059669", textDecoration: "none", marginLeft: 4 }} title="Open your roast">
+                          View
+                        </Link>
+                      ) : null}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -257,9 +325,28 @@ export default function LeaderboardPage() {
                       </div>
                     </div>
                   </div>
-                  <Link href="/upload" className="btn-primary" style={{ display: "block", textAlign: "center", textDecoration: "none", fontSize: 13 }}>
-                    Improve My Score
-                  </Link>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <Link href="/result" className="btn-primary" style={{ display: "block", textAlign: "center", textDecoration: "none", fontSize: 13 }}>
+                      View full roast →
+                    </Link>
+                    <Link
+                      href="/upload"
+                      style={{
+                        display: "block",
+                        textAlign: "center",
+                        textDecoration: "none",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        padding: "10px 16px",
+                        borderRadius: 12,
+                        border: "1px solid #EAE6DF",
+                        background: "#FAF7F2",
+                        color: "#555",
+                      }}
+                    >
+                      Improve my score
+                    </Link>
+                  </div>
                 </div>
               )}
 
@@ -271,14 +358,14 @@ export default function LeaderboardPage() {
                   { label: "Most common industry", value: (() => {
                     const counts: Record<string, number> = {};
                     filtered.forEach((r) => { if (r.industry) counts[r.industry] = (counts[r.industry] ?? 0) + 1; });
-                    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]?.split(" ")[0] ?? "—";
+                    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
                   })() },
                   { label: "Highest score", value: mostCooked[0] ? `${mostCooked[0].cooked_score} 🔥` : "—" },
                   { label: "Lowest score", value: leastCooked[0] ? `${leastCooked[0].cooked_score} ✅` : "—" },
                 ].map((s) => (
-                  <div key={s.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <span style={{ fontSize: 13, color: "#666" }}>{s.label}</span>
-                    <span style={{ fontWeight: 700, color: "#1a1a1a", fontSize: 13 }}>{s.value}</span>
+                  <div key={s.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 10 }}>
+                    <span style={{ fontSize: 13, color: "#666", flexShrink: 0 }}>{s.label}</span>
+                    <span style={{ fontWeight: 700, color: "#1a1a1a", fontSize: 13, textAlign: "right", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.value}</span>
                   </div>
                 ))}
               </div>

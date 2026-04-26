@@ -112,12 +112,6 @@ p {
     flex-direction: column !important;
   }
 
-  .social-proof-bar {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 16px !important;
-  }
-
   .hero-section {
     flex-direction: column !important;
   }

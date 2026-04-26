@@ -5,11 +5,6 @@ import Footer from "./components/Footer";
 import HeroUpload from "./components/HeroUpload";
 import LeaderboardPreview from "./components/LeaderboardPreview";
 
-const avatarColors = [
-  "#FF6B3D", "#7C6CF2", "#2DD4BF", "#F59E0B", "#EF4444",
-  "#8B5CF6", "#EC4899", "#10B981",
-];
-
 export default function HomePage() {
   return (
     <div style={{ background: "#FAF7F2", minHeight: "100vh" }}>
@@ -140,7 +135,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Social proof */}
+      {/* How it works + privacy (replaces placeholder social proof) */}
       <section
         style={{
           background: "white",
@@ -148,53 +143,29 @@ export default function HomePage() {
           borderBottom: "1px solid #EAE6DF",
         }}
       >
-        <div className="social-proof-bar max-w-6xl mx-auto px-6 py-6 flex flex-wrap items-center gap-8">
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ display: "flex" }}>
-              {["A", "B", "C", "D", "E"].map((l, i) => (
-                <div
-                  key={i}
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: "50%",
-                    background: avatarColors[i],
-                    border: "2px solid white",
-                    marginLeft: i > 0 ? -8 : 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "white",
-                    fontSize: 11,
-                    fontWeight: 700,
-                  }}
-                >
-                  {l}
-                </div>
-              ))}
-            </div>
-            <span style={{ color: "#555", fontSize: 14 }}>
-              Join <strong>12,000+</strong> people getting roasted daily
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 28, fontWeight: 800, color: "#1a1a1a" }}>72/100</span>
-            <span style={{ fontSize: 20 }}>🔥</span>
-            <span style={{ color: "#888", fontSize: 14 }}>Average Cooked Score</span>
+        <div className="max-w-6xl mx-auto px-6 py-10" style={{ display: "grid", gap: 28 }}>
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: "#1a1a1a", marginBottom: 12 }}>
+              What happens when you upload
+            </h2>
+            <p style={{ color: "#555", fontSize: 15, lineHeight: 1.65, margin: 0 }}>
+              You add a PDF or DOCX. We run it through an AI that roasts your resume, scores how &quot;cooked&quot; you are for today&apos;s job market, breaks down replaceability and skills, and gives you blunt-but-useful feedback. Want bragging rights (or public shame)? Your roast can land on the live leaderboard.
+            </p>
           </div>
           <div
             style={{
               background: "#FAF7F2",
               border: "1px solid #EAE6DF",
-              borderRadius: 12,
-              padding: "12px 16px",
-              maxWidth: 260,
+              borderRadius: 14,
+              padding: "18px 20px",
             }}
           >
-            <p style={{ fontSize: 13, color: "#555", fontStyle: "italic", margin: 0 }}>
-              &quot;The roast was accurate... painfully accurate.&quot;
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: "#1a1a1a", marginBottom: 10, letterSpacing: 0.3 }}>
+              Privacy, plain English
+            </h3>
+            <p style={{ color: "#555", fontSize: 14, lineHeight: 1.65, margin: 0 }}>
+              <strong style={{ color: "#1a1a1a" }}>We don&apos;t store your resume file.</strong> It&apos;s only used for that one roast request—there&apos;s no copy of your CV sitting in our database. We do save the generated roast data the app needs (for example a short name if we inferred one, your score, industry, and roast highlights) so results and the leaderboard work—never the original document.
             </p>
-            <p style={{ fontSize: 12, color: "#aaa", margin: "6px 0 0" }}>— Software Engineer</p>
           </div>
         </div>
       </section>

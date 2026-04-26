@@ -2,13 +2,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-
-const loadingSteps = [
-  "Scanning your resume... 🔍",
-  "Judging your life choices... 😬",
-  "Calculating cooked score... 🔥",
-  "Preparing roast... 💀",
-];
+import RoastLoadingOverlay, { ROAST_LOADING_STEPS } from "./RoastLoadingOverlay";
 
 export default function HeroUpload() {
   const router = useRouter();
@@ -25,7 +19,7 @@ export default function HeroUpload() {
 
       let step = 0;
       const interval = setInterval(() => {
-        step = Math.min(step + 1, loadingSteps.length - 2);
+        step = Math.min(step + 1, ROAST_LOADING_STEPS.length - 2);
         setLoadingStep(step);
       }, 1000);
 
@@ -66,46 +60,11 @@ export default function HeroUpload() {
     [roastFile]
   );
 
-  if (loading) {
-    return (
-      <div
-        style={{
-          background: "white",
-          border: "2px solid #FF6B3D",
-          borderRadius: 16,
-          padding: "32px 24px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          textAlign: "center",
-          gap: 12,
-        }}
-      >
-        <Image src="/logo.png" alt="roasting..." width={80} height={80} style={{ objectFit: "contain", animation: "float 1.5s ease-in-out infinite" }} />
-        <p style={{ fontWeight: 700, fontSize: 15, color: "#1a1a1a", margin: 0 }}>
-          {loadingSteps[loadingStep]}
-        </p>
-        <div style={{ display: "flex", gap: 6 }}>
-          {loadingSteps.map((_, i) => (
-            <div
-              key={i}
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: i <= loadingStep ? "#FF6B3D" : "#EAE6DF",
-                transition: "background 0.3s",
-              }}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div>
+    <div style={{ position: "relative" }}>
+      {loading ? (
+        <RoastLoadingOverlay step={loadingStep} subtitle="This is gonna hurt..." />
+      ) : null}
       <label
         htmlFor="hero-file-input"
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -118,9 +77,11 @@ export default function HeroUpload() {
           borderRadius: 16,
           padding: "32px 24px",
           textAlign: "center",
-          cursor: "pointer",
+          cursor: loading ? "wait" : "pointer",
           transition: "border-color 0.2s",
           marginBottom: error ? 12 : 0,
+          opacity: loading ? 0.35 : 1,
+          pointerEvents: loading ? "none" : "auto",
         }}
       >
         <input
@@ -128,6 +89,7 @@ export default function HeroUpload() {
           type="file"
           accept=".pdf,.docx"
           style={{ display: "none" }}
+          disabled={loading}
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) roastFile(f);

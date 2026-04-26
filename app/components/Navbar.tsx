@@ -26,10 +26,6 @@ export default function Navbar() {
         >
           Leaderboard
         </Link>
-
-        <Link href="/upload" className="btn-primary text-sm hidden sm:inline-flex" style={{ whiteSpace: "nowrap" }}>
-          Roast My Resume →
-        </Link>
       </div>
     </nav>
   );

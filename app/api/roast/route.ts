@@ -61,6 +61,10 @@ export async function POST(req: NextRequest) {
     return errorResponse("NO_FILE", "No file was provided.");
   }
 
+  const clientIdRaw = formData.get("clientId");
+  const clientId =
+    typeof clientIdRaw === "string" && clientIdRaw.trim().length > 0 ? clientIdRaw.trim() : null;
+
   const bytes = await file.arrayBuffer();
   const base64 = Buffer.from(bytes).toString("base64");
   const mimeType = file.name.toLowerCase().endsWith(".docx")
@@ -139,12 +143,16 @@ export async function POST(req: NextRequest) {
     );
     const candidateName = (roastData.candidateName as string) ?? "Friend";
 
-    // Delete any existing row for this person before inserting fresh
-    // (service role key bypasses RLS so this always works)
-    await supabase.from("roasts").delete().eq("candidate_name", candidateName);
+    // One row per browser: delete by client_id when present; else legacy delete by name
+    if (clientId) {
+      await supabase.from("roasts").delete().eq("client_id", clientId);
+    } else {
+      await supabase.from("roasts").delete().eq("candidate_name", candidateName);
+    }
 
     await supabase.from("roasts").insert({
       candidate_name: candidateName,
+      client_id: clientId,
       cooked_score: roastData.cookedScore,
       industry: roastData.industry,
       industry_rank: roastData.industryRank,
