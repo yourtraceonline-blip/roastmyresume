@@ -21,7 +21,7 @@ interface RoastRow {
 }
 
 /** Max rows per column; fetch pool must be large enough to fill both after filters */
-const LEADERBOARD_LIST_CAP = 100;
+const LEADERBOARD_LIST_CAP = 20;
 const LEADERBOARD_FETCH_CAP = 1000;
 
 const industryTabs = ["Global", "Tech", "Design", "Finance", "Marketing", "Product"];
