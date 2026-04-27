@@ -116,13 +116,36 @@ export default function LeaderboardPage() {
 
       <div className="max-w-6xl mx-auto px-6 py-10">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 style={{ fontSize: "clamp(2rem, 4vw, 2.6rem)", fontWeight: 800, color: "#1a1a1a", marginBottom: 6, display: "flex", alignItems: "center", gap: 10 }}>
             Leaderboard <span style={{ fontSize: 32 }}>🏆</span>
           </h1>
           <p style={{ color: "#888", fontSize: 15 }}>
             {filtered.length > 0 ? `${filtered.length} roasts` : "See how cooked everyone is"}
           </p>
+        </div>
+
+        {/* Pro CTA */}
+        <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", borderRadius: 12, padding: 16, marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ color: "white" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Want to improve your score?</div>
+            <div style={{ fontSize: 12, opacity: 0.9 }}>Get AI-powered suggestions, ATS score, and line-by-line fixes.</div>
+          </div>
+          <Link href="/improve" style={{ 
+            background: "white", 
+            color: "#667eea", 
+            border: "none", 
+            borderRadius: 8, 
+            padding: "10px 18px", 
+            fontSize: 13, 
+            fontWeight: 700, 
+            textDecoration: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: 6
+          }}>
+            Try Pro Analyzer
+          </Link>
         </div>
 
         {/* Tabs */}
@@ -311,7 +334,7 @@ export default function LeaderboardPage() {
                       <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
                         <span style={{ fontWeight: 700, color: "#FF6B3D", fontSize: 16 }}>{lastResult.cookedScore}</span>
                         <span>🔥</span>
-                        <span style={{ fontSize: 12, color: "#aaa" }}>cooked score</span>
+                        <span style={{ fontSize: 12, color: "#aaa" }}>cooked risk · higher is worse</span>
                       </div>
                     </div>
                   </div>

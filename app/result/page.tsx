@@ -257,11 +257,12 @@ export default function ResultPage() {
 
               <div className="result-hero-stats" style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
                 <div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 4, letterSpacing: 1 }}>COOKED SCORE</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 4, letterSpacing: 1 }}>COOKED RISK</div>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
                     <span style={{ fontSize: 56, fontWeight: 900, color: "#FF6B3D", lineHeight: 1 }}>{r.cookedScore}</span>
-                    <span style={{ fontSize: 18, color: "rgba(255,255,255,0.3)" }}>/100</span>
+                    <span style={{ fontSize: 18, color: "rgba(255,255,255,0.3)" }}>/100 cooked</span>
                   </div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>Higher = worse</div>
                   <div style={{ width: 140, height: 6, background: "rgba(255,255,255,0.1)", borderRadius: 999, marginTop: 8 }}>
                     <div style={{ width: `${r.cookedScore}%`, height: "100%", background: "#FF6B3D", borderRadius: 999 }} />
                   </div>
@@ -377,6 +378,19 @@ export default function ResultPage() {
           </div>
         </div>
 
+        <div style={{ background: "linear-gradient(135deg, #1a1a1a 0%, #3a1608 100%)", borderRadius: 20, padding: "26px 28px", marginBottom: 24, color: "white", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontSize: 12, color: "#FFB199", fontWeight: 900, letterSpacing: 1.2, marginBottom: 6 }}>PAID FIX PLAN</div>
+            <div style={{ fontSize: 21, fontWeight: 900, marginBottom: 4 }}>Want exact line-by-line edits to lower this risk?</div>
+            <p style={{ color: "rgba(255,255,255,0.72)", margin: 0, fontSize: 14, lineHeight: 1.6 }}>
+              $3 once unlocks peer comparison, an editor, rewritten bullets, and unlimited improvement reviews.
+            </p>
+          </div>
+          <Link href="/improve" className="btn-primary" style={{ textDecoration: "none", flexShrink: 0 }}>
+            Improve my resume →
+          </Link>
+        </div>
+
         {/* ── SCORE BREAKDOWN ── */}
         <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: "28px", marginBottom: 24 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
@@ -426,10 +440,16 @@ export default function ResultPage() {
         <div style={{ background: "linear-gradient(135deg, #FFF0EB 0%, #F0EEFF 100%)", border: "1px solid #EAE6DF", borderRadius: 20, padding: "28px", textAlign: "center", marginBottom: 48 }}>
           <p style={{ fontSize: 16, fontWeight: 800, color: "#1a1a1a", marginBottom: 16 }}>✨ Improve these areas and see your score go up!</p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            <Link href="/improve" style={{ padding: "12px 24px", border: "1px solid #EAE6DF", borderRadius: 12, background: "#111", fontWeight: 600, fontSize: 14, color: "#fff", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              ✨ Get Line-by-Line Fixes
+            </Link>
             <Link href="/leaderboard" className="btn-primary">🏆 See Leaderboard</Link>
             <Link href="/upload" style={{ padding: "12px 24px", border: "1px solid #EAE6DF", borderRadius: 12, background: "white", fontWeight: 600, fontSize: 14, color: "#555", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
               🔄 Roast Again
             </Link>
+            <a href="https://www.youtube.com/@tarat.youtube" target="_blank" rel="noopener noreferrer" style={{ padding: "12px 24px", border: "1px solid #EAE6DF", borderRadius: 12, background: "white", fontWeight: 600, fontSize: 14, color: "#555", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              📺 Watch on YouTube
+            </a>
           </div>
         </div>
       </div>

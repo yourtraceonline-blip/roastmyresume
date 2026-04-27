@@ -114,7 +114,7 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function ShareCard(
         </div>
 
         <div style={{ position: "relative", zIndex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", letterSpacing: 1.5, marginBottom: 6 }}>COOKED SCORE</div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", letterSpacing: 1.5, marginBottom: 6 }}>COOKED RISK</div>
           <div style={{ fontSize: 26, fontWeight: 900, color: "white", marginBottom: 10, lineHeight: 1.1 }}>
             {candidateName} is <span style={{ color: "#FF6B3D" }}>cooked.</span>
           </div>

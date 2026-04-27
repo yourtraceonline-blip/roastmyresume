@@ -17,7 +17,7 @@ If it IS a resume, analyze it and respond ONLY with a valid JSON object — no m
 Return exactly this shape:
 
 {
-  "cookedScore": <number 1-100, higher = more cooked / replaceable>,
+  "cookedScore": <number 1-100, higher = more cooked / replaceable / risky>,
   "monthsUntilCooked": <number, honest estimate of months until this person's role is automated or they're laid off>,
   "industryRank": <number, percentile e.g. 78 means "top 78%" — higher = worse>,
   "industry": <string, detected industry/role category>,
@@ -41,6 +41,15 @@ Return exactly this shape:
   ],
   "candidateName": <string, first name only, or "Friend" if not found>
 }
+
+Scoring calibration:
+- 0-25: unusually strong, specific, high-agency resume with quantified outcomes, scarce skills, and clear proof of shipped work.
+- 26-45: solid resume; some gaps, but credible differentiation and measurable impact.
+- 46-65: average / generic; some useful signals but not enough proof, depth, or market leverage.
+- 66-82: cooked; buzzwords, generic bullets, weak metrics, unclear ownership, or skills that look easy to replace.
+- 83-100: extremely cooked; vague, low-signal, no proof, outdated skills, or obvious automation risk.
+
+Avoid clustering around 78. Use the full scale. A strong resume should score much lower than 70. A weak resume can score 85+.
 
 Be specific to the actual resume content — name real skills, real job titles, real gaps you see. Don't be generic.`;
 
@@ -86,7 +95,7 @@ export async function POST(req: NextRequest) {
         "HTTP-Referer": "https://roastmyresume.fun",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-lite-001",
+        model: "openai/gpt-5-mini",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
