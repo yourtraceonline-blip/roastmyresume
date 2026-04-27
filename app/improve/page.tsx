@@ -92,7 +92,7 @@ export default function ImprovePage() {
   const signIn = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/improve` },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
   };
 
