@@ -123,7 +123,7 @@ CRITICAL RULES:
 5. If you cannot find specific content to improve, say "Review resume for quantified achievements" in that field
 6. Analyze the actual resume text provided - find weak verbs, missing metrics, vague descriptions`;
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -131,25 +131,19 @@ CRITICAL RULES:
       "HTTP-Referer": "https://roastmyresume.fun",
     },
     body: JSON.stringify({
-      model: "openai/gpt-4o-mini",
+      model: "anthropic/claude-haiku-4.5",
       temperature: 0.7,
       messages: [
         { role: "system", content: prompt },
-        {
-          role: "user",
-          content: `Roast result JSON:\n${JSON.stringify(roastResult, null, 2)}\n\nResume/editor text:\n${currentResume || "(user has not pasted resume text yet)"}`,
-        },
+        { role: "user", content: `Roast result JSON:\n${JSON.stringify(roastResult, null, 2)}\n\nResume/editor text:\n${currentResume || "(user has not pasted resume text yet)"}` },
       ],
     }),
   });
-
-  if (!response.ok) {
-    const text = await response.text();
-    console.error("Improve API OpenRouter error:", text);
+  if (!res.ok) {
+    console.error("Improve API error:", await res.text());
     return NextResponse.json({ error: "AI improvement generation failed." }, { status: 502 });
   }
-
-  const ai = await response.json();
+  const ai = await res.json();
   const raw = ai.choices?.[0]?.message?.content ?? "";
   let parsed: ImprovementResponse;
   try {

@@ -587,16 +587,20 @@ export default function ResumePremiumEditor({
         </div>
       )}
 
-      {/* Show analyzing state when waiting for improvements */}
-      {resumeText && !hasImprovements && (
+      {/* Show analyzing state during upload/extraction and while waiting for improvements */}
+      {(analyzing || (resumeText && !hasImprovements)) && !improvement && (
         <div style={{ background: "white", borderRadius: 12, border: "1px solid #e5e5e5", padding: 48, textAlign: "center" }}>
           <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}>
               <path d="M21 12a9 9 0 11-6.219-8.56"/>
             </svg>
           </div>
-          <p style={{ color: "#374151", fontSize: 14, fontWeight: 500, margin: "0 0 8px" }}>Analyzing your resume...</p>
-          <p style={{ color: "#9ca3af", fontSize: 12, margin: 0 }}>Generating score, suggestions, and peer comparison</p>
+          <p style={{ color: "#374151", fontSize: 14, fontWeight: 500, margin: "0 0 8px" }}>
+            {resumeText ? "Analyzing your resume…" : "Reading your PDF…"}
+          </p>
+          <p style={{ color: "#9ca3af", fontSize: 12, margin: 0 }}>
+            {resumeText ? "Generating score, suggestions, and peer comparison" : "Extracting text and preparing analysis"}
+          </p>
         </div>
       )}
     </div>

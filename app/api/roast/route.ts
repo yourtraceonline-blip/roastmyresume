@@ -79,14 +79,11 @@ export async function POST(req: NextRequest) {
     return errorResponse("SERVER_ERROR", "Server misconfiguration.", 500);
   }
 
-  const bytes = await file.arrayBuffer();
-  const base64 = Buffer.from(bytes).toString("base64");
-  const lowerName = file.name.toLowerCase();
-  const mimeType = lowerName.endsWith(".txt") ? "text/plain" : "application/pdf";
+  const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
 
   let raw = "";
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -94,38 +91,30 @@ export async function POST(req: NextRequest) {
         "HTTP-Referer": "https://roastmyresume.fun",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-001",
+        model: "anthropic/claude-haiku-4.5",
+        temperature: 0.8,
+        provider: { order: ["Anthropic"], allow_fallbacks: false },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
             content: [
-              {
-                type: "file",
-                file: {
-                  filename: file.name,
-                  file_data: `data:${mimeType};base64,${base64}`,
-                },
-              },
+              { type: "file", file: { filename: file.name, file_data: `data:application/pdf;base64,${base64}` } },
               { type: "text", text: "Analyze this resume." },
             ],
           },
         ],
-        temperature: 0.8,
       }),
     });
-
-    if (!response.ok) {
-      const err = await response.text();
-      console.error("OpenRouter error:", err);
+    if (!res.ok) {
+      console.error("OpenRouter error:", await res.text());
       return errorResponse("AI_ERROR", "The AI service is temporarily unavailable. Please try again in a moment.", 502);
     }
-
-    const data = await response.json();
+    const data = await res.json();
     raw = data.choices?.[0]?.message?.content ?? "";
   } catch (e) {
-    console.error("Fetch error:", e);
-    return errorResponse("AI_ERROR", "Could not reach the AI service. Please try again.", 502);
+    console.error("Roast fetch error:", e);
+    return errorResponse("AI_ERROR", "The AI service is temporarily unavailable. Please try again in a moment.", 502);
   }
 
   // Parse the JSON response
