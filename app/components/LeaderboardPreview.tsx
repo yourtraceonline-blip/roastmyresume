@@ -23,8 +23,8 @@ export default function LeaderboardPreview() {
         .limit(100);
 
       if (data && data.length > 0) {
-        const top5 = [...data].filter((r) => r.cooked_score >= 50).sort((a, b) => b.cooked_score - a.cooked_score).slice(0, 5);
-        const bottom5 = [...data].filter((r) => r.cooked_score < 50).sort((a, b) => a.cooked_score - b.cooked_score).slice(0, 5);
+        const top5 = [...data].sort((a, b) => b.cooked_score - a.cooked_score).slice(0, 5);
+        const bottom5 = [...data].sort((a, b) => a.cooked_score - b.cooked_score).slice(0, 5);
         const avg = Math.round(data.reduce((s, r) => s + r.cooked_score, 0) / data.length);
         setMostCooked(top5);
         setLeastCooked(bottom5);
