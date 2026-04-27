@@ -1,7 +1,7 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import Link from "next/link";
 import RoastLoadingOverlay, { ROAST_LOADING_STEPS } from "./RoastLoadingOverlay";
 
 export default function HeroUpload() {
@@ -10,6 +10,11 @@ export default function HeroUpload() {
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [alreadyRoasted, setAlreadyRoasted] = useState(false);
+
+  useEffect(() => {
+    if (localStorage.getItem("roastDone") === "1") setAlreadyRoasted(true);
+  }, []);
 
   const roastFile = useCallback(
     async (file: File) => {
@@ -39,6 +44,7 @@ export default function HeroUpload() {
         }
         clearInterval(interval);
         sessionStorage.setItem("roastResult", JSON.stringify(data));
+        localStorage.setItem("roastDone", "1");
         router.push("/result");
       } catch (err) {
         clearInterval(interval);
@@ -59,6 +65,24 @@ export default function HeroUpload() {
     },
     [roastFile]
   );
+
+  if (alreadyRoasted) {
+    return (
+      <div style={{ background: "white", border: "2px dashed #EAE6DF", borderRadius: 16, padding: "32px 24px", textAlign: "center" }}>
+        <div style={{ fontSize: 36, marginBottom: 10 }}>🔥</div>
+        <p style={{ fontWeight: 700, fontSize: 16, color: "#1a1a1a", marginBottom: 6 }}>You&apos;ve already been roasted</p>
+        <p style={{ color: "#888", fontSize: 13, marginBottom: 20, lineHeight: 1.5 }}>
+          One free roast per browser. Want line-by-line fixes, ATS score &amp; peer comparison?
+        </p>
+        <Link href="/result" style={{ display: "block", background: "#FAF7F2", border: "1px solid #EAE6DF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 600, color: "#555", textDecoration: "none", marginBottom: 10 }}>
+          View my roast →
+        </Link>
+        <Link href="/improve" className="btn-primary" style={{ display: "flex", justifyContent: "center", fontSize: 14, gap: 8 }}>
+          Unlock full analysis — $3 lifetime
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div style={{ position: "relative" }}>
