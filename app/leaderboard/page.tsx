@@ -106,7 +106,7 @@ export default function LeaderboardPage() {
 
   const filtered = filterByTab(allRows, activeTab);
   const mostCooked = [...filtered].sort((a, b) => b.cooked_score - a.cooked_score).slice(0, LEADERBOARD_LIST_CAP);
-  const leastCooked = [...filtered].sort((a, b) => a.cooked_score - b.cooked_score).slice(0, LEADERBOARD_LIST_CAP);
+  const leastCooked = [...filtered].filter((r) => r.cooked_score < 50).sort((a, b) => a.cooked_score - b.cooked_score).slice(0, LEADERBOARD_LIST_CAP);
   const avgScore = filtered.length ? Math.round(filtered.reduce((s, r) => s + r.cooked_score, 0) / filtered.length) : 0;
   const sessionName = typeof lastResult?.candidateName === "string" ? lastResult.candidateName : null;
 
@@ -124,6 +124,20 @@ export default function LeaderboardPage() {
             {filtered.length > 0 ? `${filtered.length} roasts` : "See how cooked everyone is"}
           </p>
         </div>
+
+        {/* Coffee banner */}
+        <a href="https://buymeacoffee.com/taratdev" target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 12, padding: "12px 18px", marginBottom: 16, textDecoration: "none", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 22 }}>☕</span>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#92400e" }}>This roaster runs on coffee</div>
+              <div style={{ fontSize: 12, color: "#b45309" }}>AI credits aren't free — buy me a coffee to keep this running for everyone</div>
+            </div>
+          </div>
+          <div style={{ background: "#f59e0b", color: "white", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }}>
+            Buy me a coffee →
+          </div>
+        </a>
 
         {/* Pro CTA */}
         <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", borderRadius: 12, padding: 16, marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>

@@ -55,9 +55,9 @@ const DEMO: RoastResult = {
 };
 
 function scoreColor(score: number) {
-  if (score >= 70) return "#EF4444";
+  if (score >= 70) return "#10B981";
   if (score >= 45) return "#F59E0B";
-  return "#10B981";
+  return "#EF4444";
 }
 
 function ScoreCard({ label, score, hint }: { label: string; score: number; hint?: string }) {
@@ -202,7 +202,7 @@ export default function ResultPage() {
 
   const cookLabel = r.cookedScore >= 80 ? "Well done 🔥" : r.cookedScore >= 60 ? "Medium well 🌭" : r.cookedScore >= 40 ? "Medium 😬" : "Rare 🥩";
   const breakdown = [
-    { label: "Replaceability", score: r.scoreBreakdown.replaceability, hint: SCORE_BREAKDOWN_HINTS.Replaceability },
+    { label: "Job Security", score: r.scoreBreakdown.replaceability, hint: SCORE_BREAKDOWN_HINTS.Replaceability },
     { label: "Skill Depth", score: r.scoreBreakdown.skillDepth, hint: SCORE_BREAKDOWN_HINTS["Skill Depth"] },
     { label: "Market Demand", score: r.scoreBreakdown.marketDemand, hint: SCORE_BREAKDOWN_HINTS["Market Demand"] },
     { label: "Growth Trajectory", score: r.scoreBreakdown.growthTrajectory, hint: SCORE_BREAKDOWN_HINTS["Growth Trajectory"] },

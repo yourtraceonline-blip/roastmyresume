@@ -21,7 +21,7 @@ interface ShareCardProps {
 }
 
 function Bar({ label, score }: { label: string; score: number }) {
-  const color = score >= 70 ? "#EF4444" : score >= 45 ? "#F59E0B" : "#10B981";
+  const color = score >= 70 ? "#10B981" : score >= 45 ? "#F59E0B" : "#EF4444";
   const hint = SCORE_BREAKDOWN_HINTS[label];
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>

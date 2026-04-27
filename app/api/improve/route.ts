@@ -148,9 +148,20 @@ CRITICAL RULES:
   let parsed: ImprovementResponse;
   try {
     const stripped = raw.replace(/```(?:json)?/gi, "").trim();
-    const jsonMatch = stripped.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("No JSON found");
-    parsed = JSON.parse(jsonMatch[0]);
+    let found: ImprovementResponse | null = null;
+    for (const chunk of stripped.split(/\n\s*\n/)) {
+      const m = chunk.match(/\{[\s\S]*\}/);
+      if (!m) continue;
+      try {
+        const candidate = JSON.parse(m[0]);
+        if (candidate.lineEdits !== undefined || candidate.cookedScore !== undefined) {
+          found = candidate;
+          break;
+        }
+      } catch {}
+    }
+    if (!found) throw new Error("No valid JSON found");
+    parsed = found;
   } catch {
     console.error("Failed to parse improve response:", raw);
     return NextResponse.json({ error: "AI returned invalid improvement JSON." }, { status: 502 });
