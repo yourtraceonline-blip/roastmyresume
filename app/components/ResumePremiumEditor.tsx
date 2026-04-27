@@ -26,6 +26,7 @@ type Props = {
   improvement: ImprovementPanel | null;
   generating: boolean;
   onGenerate: (resumeText?: string) => void;
+  paywalled?: boolean;
 };
 
 export default function ResumePremiumEditor({
@@ -36,6 +37,7 @@ export default function ResumePremiumEditor({
   improvement,
   generating,
   onGenerate,
+  paywalled = false,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -123,15 +125,14 @@ export default function ResumePremiumEditor({
       onResumeChange(extractedText);
       showToast("Resume imported");
       
-      // Trigger analysis manually after a brief delay to let state settle
-      setTimeout(() => {
-        setAnalyzing(true);
-        
-        // Run generation - it now includes score in the response
-        onGenerate(extractedText);
-        
-        setTimeout(() => setAnalyzing(false), 15000);
-      }, 500);
+      // Trigger analysis automatically unless the user is on the free-used paywall
+      if (!paywalled) {
+        setTimeout(() => {
+          setAnalyzing(true);
+          onGenerate(extractedText);
+          setTimeout(() => setAnalyzing(false), 15000);
+        }, 500);
+      }
     } catch (e) {
       showToast((e as Error).message);
       setAnalyzing(false);

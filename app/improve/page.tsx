@@ -78,7 +78,14 @@ export default function ImprovePage() {
         if (!res.ok) throw new Error(json.error ?? "Could not load account.");
         setMe(json);
 
-        // Don't load any previous state - start fresh each time
+        // If they've used their free analysis, load the previous results so they can still see them
+        if (json.freeUsed) {
+          const prevRes = await fetch("/api/improve", { headers: { Authorization: `Bearer ${token}` } });
+          const prevJson = await prevRes.json();
+          if (prevRes.ok && prevJson.latest) {
+            setImprovement(prevJson.latest);
+          }
+        }
       } catch (e) {
         setError((e as Error).message);
       } finally {
@@ -246,7 +253,7 @@ export default function ImprovePage() {
               </p>
             </div>
           </section>
-        ) : !me?.hasPaid && me?.freeUsed ? (
+        ) : !me?.hasPaid && me?.freeUsed && !improvement ? (
           <section style={{ maxWidth: 600, margin: "0 auto" }}>
             <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", borderRadius: 20, padding: "clamp(16px, 4vw, 32px)", marginBottom: 24, color: "white", textAlign: "center" }}>
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1, opacity: 0.85, marginBottom: 8 }}>FREE ANALYSIS USED</div>
@@ -309,15 +316,29 @@ export default function ImprovePage() {
             )}
           </section>
         ) : session?.access_token ? (
-          <ResumePremiumEditor
-            accessToken={session.access_token}
-            baselineScore={score}
-            resumeText={resumeText}
-            onResumeChange={setResumeText}
-            improvement={improvement}
-            generating={generating}
-            onGenerate={generate}
-          />
+          <>
+            {!me?.hasPaid && me?.freeUsed && improvement && (
+              <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", borderRadius: 14, padding: "16px 20px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+                <div style={{ color: "white" }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>Your free analysis — read-only</div>
+                  <div style={{ fontSize: 13, opacity: 0.85 }}>Unlock $3 lifetime access to re-analyze as you improve your resume.</div>
+                </div>
+                <button type="button" onClick={checkout} disabled={checkingOut} style={{ background: "white", color: "#667eea", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: checkingOut ? "wait" : "pointer", whiteSpace: "nowrap" }}>
+                  {checkingOut ? "Opening..." : "Unlock — $3 lifetime"}
+                </button>
+              </div>
+            )}
+            <ResumePremiumEditor
+              accessToken={session.access_token}
+              baselineScore={score}
+              resumeText={resumeText}
+              onResumeChange={setResumeText}
+              improvement={improvement}
+              generating={generating}
+              onGenerate={!me?.hasPaid && me?.freeUsed ? checkout : generate}
+              paywalled={!me?.hasPaid && me?.freeUsed}
+            />
+          </>
         ) : null}
       </main>
       <Footer />
