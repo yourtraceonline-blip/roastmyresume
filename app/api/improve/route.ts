@@ -131,7 +131,7 @@ CRITICAL RULES:
       "HTTP-Referer": "https://roastmyresume.fun",
     },
     body: JSON.stringify({
-      model: "openai/gpt-5-mini",
+      model: "openai/gpt-4o-mini",
       temperature: 0.7,
       messages: [
         { role: "system", content: prompt },

@@ -74,15 +74,40 @@ export async function POST(req: NextRequest) {
   const clientId =
     typeof clientIdRaw === "string" && clientIdRaw.trim().length > 0 ? clientIdRaw.trim() : null;
 
-  const bytes = await file.arrayBuffer();
-  const base64 = Buffer.from(bytes).toString("base64");
-  const mimeType = file.name.toLowerCase().endsWith(".docx")
-    ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    : "application/pdf";
-
   const apiKey = process.env.OPENROUTER_KEY;
   if (!apiKey) {
     return errorResponse("SERVER_ERROR", "Server misconfiguration.", 500);
+  }
+
+  // Extract text from PDF/TXT; fall back to empty string for DOCX (unsupported)
+  let resumeText = "";
+  const lowerName = file.name.toLowerCase();
+  if (lowerName.endsWith(".txt")) {
+    resumeText = (await file.text()).slice(0, 16000);
+  } else if (lowerName.endsWith(".pdf")) {
+    try {
+      const pdfjs = await import("pdfjs-dist");
+      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+        "pdfjs-dist/build/pdf.worker.min.mjs",
+        import.meta.url
+      ).toString();
+      const uint8 = new Uint8Array(await file.arrayBuffer());
+      const pdf = await pdfjs.getDocument({ data: uint8 }).promise;
+      let text = "";
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map((it: any) => it.str).join(" ") + "\n";
+      }
+      resumeText = text.slice(0, 16000);
+    } catch (err) {
+      console.error("PDF extract error:", err);
+      return errorResponse("AI_ERROR", "Could not read the PDF. Try a different file.", 422);
+    }
+  }
+
+  if (!resumeText.trim()) {
+    return errorResponse("NO_FILE", "Could not extract text from this file. Please use a text-based PDF.", 422);
   }
 
   let raw = "";
@@ -95,16 +120,10 @@ export async function POST(req: NextRequest) {
         "HTTP-Referer": "https://roastmyresume.fun",
       },
       body: JSON.stringify({
-        model: "openai/gpt-5-mini",
+        model: "openai/gpt-4o-mini",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Here is the document to analyze:" },
-              { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64}` } },
-            ],
-          },
+          { role: "user", content: `Resume text:\n\n${resumeText}` },
         ],
         temperature: 0.8,
       }),
