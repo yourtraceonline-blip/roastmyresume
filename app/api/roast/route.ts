@@ -79,36 +79,10 @@ export async function POST(req: NextRequest) {
     return errorResponse("SERVER_ERROR", "Server misconfiguration.", 500);
   }
 
-  // Extract text from PDF/TXT; fall back to empty string for DOCX (unsupported)
-  let resumeText = "";
+  const bytes = await file.arrayBuffer();
+  const base64 = Buffer.from(bytes).toString("base64");
   const lowerName = file.name.toLowerCase();
-  if (lowerName.endsWith(".txt")) {
-    resumeText = (await file.text()).slice(0, 16000);
-  } else if (lowerName.endsWith(".pdf")) {
-    try {
-      const pdfjs = await import("pdfjs-dist");
-      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-        "pdfjs-dist/build/pdf.worker.min.mjs",
-        import.meta.url
-      ).toString();
-      const uint8 = new Uint8Array(await file.arrayBuffer());
-      const pdf = await pdfjs.getDocument({ data: uint8 }).promise;
-      let text = "";
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        text += content.items.map((it: any) => it.str).join(" ") + "\n";
-      }
-      resumeText = text.slice(0, 16000);
-    } catch (err) {
-      console.error("PDF extract error:", err);
-      return errorResponse("AI_ERROR", "Could not read the PDF. Try a different file.", 422);
-    }
-  }
-
-  if (!resumeText.trim()) {
-    return errorResponse("NO_FILE", "Could not extract text from this file. Please use a text-based PDF.", 422);
-  }
+  const mimeType = lowerName.endsWith(".txt") ? "text/plain" : "application/pdf";
 
   let raw = "";
   try {
@@ -120,10 +94,22 @@ export async function POST(req: NextRequest) {
         "HTTP-Referer": "https://roastmyresume.fun",
       },
       body: JSON.stringify({
-        model: "openai/gpt-4o-mini",
+        model: "google/gemini-2.0-flash-001",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `Resume text:\n\n${resumeText}` },
+          {
+            role: "user",
+            content: [
+              {
+                type: "file",
+                file: {
+                  filename: file.name,
+                  file_data: `data:${mimeType};base64,${base64}`,
+                },
+              },
+              { type: "text", text: "Analyze this resume." },
+            ],
+          },
         ],
         temperature: 0.8,
       }),

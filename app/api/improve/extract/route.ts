@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthedUser, unauthorized } from "../../../../lib/authServer";
-import { hasPaidAccess } from "../../../../lib/paidAccess";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 async function extractPdfText(buffer: Uint8Array): Promise<string> {
-  const pdfjs = await import("pdfjs-dist");
-  
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/build/pdf.worker.min.mjs",
-    import.meta.url
-  ).toString();
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc = "";
   
   const loadingTask = pdfjs.getDocument({ data: buffer });
   const pdf = await loadingTask.promise;
@@ -33,9 +28,6 @@ async function extractPdfText(buffer: Uint8Array): Promise<string> {
 export async function POST(req: NextRequest) {
   const auth = await getAuthedUser(req);
   if (!auth) return unauthorized();
-  if (!(await hasPaidAccess(auth.user.id))) {
-    return NextResponse.json({ error: "Payment required." }, { status: 402 });
-  }
 
   let formData: FormData;
   try {
