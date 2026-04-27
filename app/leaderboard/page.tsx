@@ -20,7 +20,6 @@ interface RoastRow {
   months_until_cooked: number;
 }
 
-const PAGE_SIZE = 20;
 const LEADERBOARD_FETCH_CAP = 500;
 
 const industryTabs = ["Global", "Tech", "Design", "Finance", "Marketing", "Product"];
@@ -57,8 +56,6 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [exactRank, setExactRank] = useState<number | null>(null);
   const [exactTotal, setExactTotal] = useState<number | null>(null);
-  const [mostCookedVisible, setMostCookedVisible] = useState(PAGE_SIZE);
-  const [leastCookedVisible, setLeastCookedVisible] = useState(PAGE_SIZE);
 
   const myClientId = useSyncExternalStore(
     () => () => {},
@@ -106,10 +103,8 @@ export default function LeaderboardPage() {
   }, [lastResult?.cookedScore]);
 
   const filtered = filterByTab(allRows, activeTab);
-  const allMostCooked = [...filtered].sort((a, b) => b.cooked_score - a.cooked_score);
-  const allLeastCooked = [...filtered].filter((r) => r.cooked_score < 50).sort((a, b) => a.cooked_score - b.cooked_score);
-  const mostCooked = allMostCooked.slice(0, mostCookedVisible);
-  const leastCooked = allLeastCooked.slice(0, leastCookedVisible);
+  const mostCooked = [...filtered].sort((a, b) => b.cooked_score - a.cooked_score);
+  const leastCooked = [...filtered].filter((r) => r.cooked_score < 50).sort((a, b) => a.cooked_score - b.cooked_score);
   const avgScore = filtered.length ? Math.round(filtered.reduce((s, r) => s + r.cooked_score, 0) / filtered.length) : 0;
   const sessionName = typeof lastResult?.candidateName === "string" ? lastResult.candidateName : null;
 
@@ -168,7 +163,7 @@ export default function LeaderboardPage() {
         {/* Tabs */}
         <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap" }}>
           {industryTabs.map((tab) => (
-            <button key={tab} onClick={() => { setActiveTab(tab); setMostCookedVisible(PAGE_SIZE); setLeastCookedVisible(PAGE_SIZE); }}
+            <button key={tab} onClick={() => setActiveTab(tab)}
               style={{ padding: "8px 20px", borderRadius: 999, border: "1px solid", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s", background: activeTab === tab ? "#1a1a1a" : "white", color: activeTab === tab ? "white" : "#555", borderColor: activeTab === tab ? "#1a1a1a" : "#EAE6DF" }}>
               {tab}
             </button>
@@ -190,15 +185,15 @@ export default function LeaderboardPage() {
           <div className="leaderboard-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 320px", gap: 24 }}>
 
             {/* Most Cooked */}
-            <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, overflow: "hidden" }}>
-              <div style={{ padding: "20px 24px", borderBottom: "1px solid #EAE6DF" }}>
+            <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              <div style={{ padding: "20px 24px", borderBottom: "1px solid #EAE6DF", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, lineHeight: 1 }}>
                   <span style={{ fontWeight: 700, color: "#1a1a1a", fontSize: 16 }}>Most Cooked</span>
                   <span style={{ fontSize: 18, lineHeight: 1 }} aria-hidden>🔥</span>
                 </div>
-                <div style={{ fontSize: 12, color: "#aaa", marginTop: 2, lineHeight: 1.25 }}>descending disaster · {allMostCooked.length} total</div>
+                <div style={{ fontSize: 12, color: "#aaa", marginTop: 2, lineHeight: 1.25 }}>descending disaster · {mostCooked.length} total</div>
               </div>
-              <div style={{ padding: "8px 0" }}>
+              <div className="hide-scrollbar" style={{ padding: "8px 0", overflowY: "auto", maxHeight: 820 }}>
                 {mostCooked.map((p, i) => {
                   const isYou = isYourRow(p, myClientId, sessionName);
                   return (
@@ -218,26 +213,18 @@ export default function LeaderboardPage() {
                   );
                 })}
               </div>
-              {mostCookedVisible < allMostCooked.length && (
-                <div style={{ padding: "12px 24px", borderTop: "1px solid #EAE6DF" }}>
-                  <button type="button" onClick={() => setMostCookedVisible((v) => Math.min(v + PAGE_SIZE, LEADERBOARD_FETCH_CAP))}
-                    style={{ width: "100%", background: "#FAF7F2", border: "1px solid #EAE6DF", borderRadius: 10, padding: "10px", fontSize: 13, fontWeight: 600, color: "#555", cursor: "pointer" }}>
-                    Load more ({allMostCooked.length - mostCookedVisible} remaining)
-                  </button>
-                </div>
-              )}
             </div>
 
             {/* Least Cooked */}
-            <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, overflow: "hidden" }}>
-              <div style={{ padding: "20px 24px", borderBottom: "1px solid #EAE6DF" }}>
+            <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              <div style={{ padding: "20px 24px", borderBottom: "1px solid #EAE6DF", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, lineHeight: 1 }}>
                   <span style={{ fontWeight: 700, color: "#1a1a1a", fontSize: 16 }}>Least Cooked</span>
                   <span style={{ fontSize: 18, lineHeight: 1 }} aria-hidden>😎</span>
                 </div>
                 <div style={{ fontSize: 12, color: "#aaa", marginTop: 2, lineHeight: 1.25 }}>surviving the apocalypse · score &lt; 50</div>
               </div>
-              <div style={{ padding: "8px 0" }}>
+              <div className="hide-scrollbar" style={{ padding: "8px 0", overflowY: "auto", maxHeight: 820 }}>
                 {leastCooked.length === 0 ? (
                   <div style={{ padding: "32px 24px", textAlign: "center", color: "#bbb", fontSize: 13 }}>No survivors yet — be the first to score under 50.</div>
                 ) : leastCooked.map((p, i) => {
@@ -259,14 +246,6 @@ export default function LeaderboardPage() {
                   );
                 })}
               </div>
-              {leastCookedVisible < allLeastCooked.length && (
-                <div style={{ padding: "12px 24px", borderTop: "1px solid #EAE6DF" }}>
-                  <button type="button" onClick={() => setLeastCookedVisible((v) => Math.min(v + PAGE_SIZE, LEADERBOARD_FETCH_CAP))}
-                    style={{ width: "100%", background: "#FAF7F2", border: "1px solid #EAE6DF", borderRadius: 10, padding: "10px", fontSize: 13, fontWeight: 600, color: "#555", cursor: "pointer" }}>
-                    Load more ({allLeastCooked.length - leastCookedVisible} remaining)
-                  </button>
-                </div>
-              )}
             </div>
 
             {/* Sidebar */}
