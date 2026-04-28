@@ -1,12 +1,20 @@
 import { unzipSync } from "node:zlib";
 import { DOMMatrix } from "@napi-rs/canvas";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 // Polyfill DOMMatrix for pdfjs-dist in Node.js
 if (typeof globalThis.DOMMatrix === "undefined") {
   (globalThis as any).DOMMatrix = DOMMatrix;
 }
 
+// Resolve the absolute path to pdfjs-dist worker so it works in serverless
+const require = createRequire(import.meta.url ?? fileURLToPath(import.meta.url));
+const workerPath = require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs");
+
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
+pdfjs.GlobalWorkerOptions.workerSrc = `file://${workerPath}`;
 
 /**
  * Extract plain text from a PDF file (ArrayBuffer) using pdfjs-dist.
