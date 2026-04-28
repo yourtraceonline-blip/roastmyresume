@@ -1,40 +1,13 @@
 import { unzipSync } from "node:zlib";
-import { DOMMatrix } from "@napi-rs/canvas";
-import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
-
-// Polyfill DOMMatrix for pdfjs-dist in Node.js
-if (typeof globalThis.DOMMatrix === "undefined") {
-  (globalThis as any).DOMMatrix = DOMMatrix;
-}
-
-// Resolve the absolute path to pdfjs-dist worker so it works in serverless
-const require = createRequire(import.meta.url ?? fileURLToPath(import.meta.url));
-const workerPath = require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs");
-
-import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
-pdfjs.GlobalWorkerOptions.workerSrc = `file://${workerPath}`;
+// Import the internal parser directly to skip the top-level test script in index.js
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
 /**
- * Extract plain text from a PDF file (ArrayBuffer) using pdfjs-dist.
+ * Extract plain text from a PDF file (ArrayBuffer) using pdf-parse.
  */
 export async function extractTextFromPdf(buffer: ArrayBuffer): Promise<string> {
-  const data = new Uint8Array(buffer);
-  const doc = await pdfjs.getDocument({ data }).promise;
-
-  const pages: string[] = [];
-  for (let i = 1; i <= doc.numPages; i++) {
-    const page = await doc.getPage(i);
-    const textContent = await page.getTextContent();
-    const text = textContent.items
-      .map((item: any) => ("str" in item ? item.str : ""))
-      .join(" ");
-    pages.push(text);
-    page.cleanup();
-  }
-
-  return pages.join("\n\n---PAGE BREAK---\n\n").trim();
+  const data = await pdfParse(Buffer.from(buffer));
+  return data.text;
 }
 
 /**
