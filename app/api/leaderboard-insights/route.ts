@@ -6,7 +6,7 @@ export const runtime = "nodejs";
  * Leaderboard AI cohort insights — disabled for now.
  *
  * Re-enable: restore the POST implementation from git (MiMo + `lib/leaderboardInsights.ts`)
- * and wire `AiInsightsBlock` + `tab` prop back into `app/components/LeaderboardAnalytics.tsx`.
+ * and wire the leaderboard analytics UI back in when you re-add it.
  */
 export async function POST() {
   return NextResponse.json({ error: "Leaderboard insights are temporarily disabled." }, { status: 503 });

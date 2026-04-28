@@ -5,7 +5,6 @@ import Image from "next/image";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import CircularProgress from "../components/CircularProgress";
-import LeaderboardAnalytics from "../components/LeaderboardAnalytics";
 import { supabase } from "../../lib/supabase";
 import { getClientId } from "../../lib/clientId";
 import { podiumRankContent, podiumRankIsMedal } from "../../lib/podiumRank";
@@ -333,10 +332,6 @@ export default function LeaderboardPage() {
           </div>
         )}
 
-        {/* Analytics Section */}
-        {filtered.length > 0 && (
-          <LeaderboardAnalytics rows={filtered} />
-        )}
       </div>
 
       <Footer />
