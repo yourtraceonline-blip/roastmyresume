@@ -1,4 +1,11 @@
 import { unzipSync } from "node:zlib";
+import { DOMMatrix } from "@napi-rs/canvas";
+
+// Polyfill DOMMatrix for pdfjs-dist in Node.js
+if (typeof globalThis.DOMMatrix === "undefined") {
+  (globalThis as any).DOMMatrix = DOMMatrix;
+}
+
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 
 /**
