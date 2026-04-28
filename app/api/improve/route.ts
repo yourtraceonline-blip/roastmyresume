@@ -94,8 +94,8 @@ export async function POST(req: NextRequest) {
   const roastResult = body.roastResult ?? {};
   const currentResume = typeof body.currentResume === "string" ? body.currentResume.slice(0, 16000) : "";
 
-  const apiKey = process.env.OPENROUTER_KEY;
-  if (!apiKey) return NextResponse.json({ error: "OPENROUTER_KEY is missing." }, { status: 500 });
+  const apiKey = process.env.MIMO_API_KEY;
+  if (!apiKey) return NextResponse.json({ error: "MIMO_API_KEY is missing." }, { status: 500 });
 
   const prompt = `You are a professional resume editor and ATS expert. Generate improvement feedback for a resume.
 
@@ -123,16 +123,19 @@ CRITICAL RULES:
 5. If you cannot find specific content to improve, say "Review resume for quantified achievements" in that field
 6. Analyze the actual resume text provided - find weak verbs, missing metrics, vague descriptions`;
 
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const res = await fetch("https://token-plan-sgp.xiaomimimo.com/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
-      "HTTP-Referer": "https://roastmyresume.fun",
     },
     body: JSON.stringify({
-      model: "anthropic/claude-haiku-4.5",
+      model: "mimo-v2.5",
       temperature: 0.7,
+      top_p: 0.95,
+      max_completion_tokens: 8192,
+      stream: false,
+      response_format: { type: "json_object" },
       messages: [
         { role: "system", content: prompt },
         { role: "user", content: `Roast result JSON:\n${JSON.stringify(roastResult, null, 2)}\n\nResume/editor text:\n${currentResume || "(user has not pasted resume text yet)"}` },

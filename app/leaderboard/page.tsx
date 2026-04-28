@@ -1,10 +1,11 @@
 "use client";
-import { useState, useEffect, useSyncExternalStore } from "react";
+import { useState, useEffect, useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import CircularProgress from "../components/CircularProgress";
+import LeaderboardAnalytics from "../components/LeaderboardAnalytics";
 import { supabase } from "../../lib/supabase";
 import { getClientId } from "../../lib/clientId";
 import { podiumRankContent, podiumRankIsMedal } from "../../lib/podiumRank";
@@ -102,7 +103,7 @@ export default function LeaderboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastResult?.cookedScore]);
 
-  const filtered = filterByTab(allRows, activeTab);
+  const filtered = useMemo(() => filterByTab(allRows, activeTab), [allRows, activeTab]);
   const mostCooked = [...filtered].filter((r) => r.cooked_score > 50).sort((a, b) => b.cooked_score - a.cooked_score);
   const leastCooked = [...filtered].filter((r) => r.cooked_score < 50).sort((a, b) => a.cooked_score - b.cooked_score);
   const avgScore = filtered.length ? Math.round(filtered.reduce((s, r) => s + r.cooked_score, 0) / filtered.length) : 0;
@@ -330,6 +331,11 @@ export default function LeaderboardPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Analytics Section */}
+        {filtered.length > 0 && (
+          <LeaderboardAnalytics rows={filtered} />
         )}
       </div>
 

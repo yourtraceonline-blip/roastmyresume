@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { extractTextFromFile } from "../../../lib/pdfExtractor";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -112,40 +113,51 @@ export async function POST(req: NextRequest) {
   const clientId =
     typeof clientIdRaw === "string" && clientIdRaw.trim().length > 0 ? clientIdRaw.trim() : null;
 
-  const apiKey = process.env.OPENROUTER_KEY;
+  const apiKey = process.env.MIMO_API_KEY;
   if (!apiKey) {
-    return errorResponse("SERVER_ERROR", "Server misconfiguration.", 500);
+    return errorResponse("SERVER_ERROR", "Server misconfiguration: MIMO_API_KEY is missing.", 500);
   }
 
-  const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+  // Extract text locally (PDF / DOCX / TXT)
+  let resumeText: string;
+  try {
+    const buffer = await file.arrayBuffer();
+    resumeText = await extractTextFromFile(buffer, file.name);
+  } catch (e: any) {
+    console.error("Text extraction failed:", e);
+    return errorResponse("PARSE_FAILED", e?.message || "Could not read the uploaded file.");
+  }
+
+  if (!resumeText.trim()) {
+    return errorResponse("PARSE_FAILED", "The uploaded file appears to be empty.");
+  }
 
   let raw = "";
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const res = await fetch("https://token-plan-sgp.xiaomimimo.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://roastmyresume.fun",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-haiku-4.5",
+        model: "mimo-v2.5",
         temperature: 0.8,
-        provider: { order: ["Anthropic"], allow_fallbacks: false },
+        top_p: 0.95,
+        max_completion_tokens: 8192,
+        stream: false,
+        response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
-            content: [
-              { type: "file", file: { filename: file.name, file_data: `data:application/pdf;base64,${base64}` } },
-              { type: "text", text: "Analyze this resume." },
-            ],
+            content: `Filename: ${file.name}\n\nResume text:\n${resumeText.slice(0, 30000)}\n\nAnalyze this resume and return ONLY the JSON object described in your instructions.`,
           },
         ],
       }),
     });
     if (!res.ok) {
-      console.error("OpenRouter error:", await res.text());
+      console.error("MiMo API error:", await res.text());
       return errorResponse("AI_ERROR", "The AI service is temporarily unavailable. Please try again in a moment.", 502);
     }
     const data = await res.json();
