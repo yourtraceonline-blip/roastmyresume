@@ -125,7 +125,7 @@ export default function ResumePremiumEditor({
       onResumeChange(extractedText);
       showToast("Resume imported");
       
-      // Trigger analysis automatically unless the user is on the free-used paywall
+      // Trigger analysis automatically only when the user has paid access
       if (!paywalled) {
         setTimeout(() => {
           setAnalyzing(true);

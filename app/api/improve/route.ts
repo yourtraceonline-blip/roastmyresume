@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthedUser, unauthorized } from "../../../lib/authServer";
-import { hasPaidAccess, hasUsedFreeImprovement } from "../../../lib/paidAccess";
+import { hasPaidAccess } from "../../../lib/paidAccess";
 import { createSupabaseServiceClient } from "../../../lib/supabaseServer";
 
 export const runtime = "nodejs";
@@ -86,8 +86,8 @@ export async function POST(req: NextRequest) {
   const auth = await getAuthedUser(req);
   if (!auth) return unauthorized();
   const paid = await hasPaidAccess(auth.user.id);
-  if (!paid && (await hasUsedFreeImprovement(auth.user.id))) {
-    return NextResponse.json({ error: "Payment required. You've used your free analysis." }, { status: 402 });
+  if (!paid) {
+    return NextResponse.json({ error: "Payment required." }, { status: 402 });
   }
 
   const body = await req.json().catch(() => ({}));

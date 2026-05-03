@@ -9,13 +9,3 @@ export async function hasPaidAccess(userId: string): Promise<boolean> {
     .maybeSingle();
   return data?.status === "active";
 }
-
-export async function hasUsedFreeImprovement(userId: string): Promise<boolean> {
-  const supabase = createSupabaseServiceClient();
-  const { count } = await supabase
-    .from("resume_improvements")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .not("strategy", "is", null);
-  return (count ?? 0) > 0;
-}

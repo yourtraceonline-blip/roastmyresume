@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import ResumePremiumEditor, { type ImprovementPanel } from "../components/ResumePremiumEditor";
@@ -11,7 +10,6 @@ import { supabase } from "../../lib/supabase";
 type MeResponse = {
   user: { id: string; email?: string; name?: string | null };
   hasPaid: boolean;
-  freeUsed: boolean;
 };
 
 
@@ -67,8 +65,10 @@ export default function ImprovePage() {
     async function loadMe() {
       if (!session) {
         setMe(null);
+        setImprovement(null);
         return;
       }
+      setImprovement(null);
       setLoading(true);
       setError(null);
       try {
@@ -78,13 +78,10 @@ export default function ImprovePage() {
         if (!res.ok) throw new Error(json.error ?? "Could not load account.");
         setMe(json);
 
-        // If they've used their free analysis, load the previous results so they can still see them
-        if (json.freeUsed) {
-          const prevRes = await fetch("/api/improve", { headers: { Authorization: `Bearer ${token}` } });
-          const prevJson = await prevRes.json();
-          if (prevRes.ok && prevJson.latest) {
-            setImprovement(prevJson.latest);
-          }
+        const prevRes = await fetch("/api/improve", { headers: { Authorization: `Bearer ${token}` } });
+        const prevJson = await prevRes.json();
+        if (prevRes.ok && prevJson.latest) {
+          setImprovement(prevJson.latest);
         }
       } catch (e) {
         setError((e as Error).message);
@@ -107,6 +104,7 @@ export default function ImprovePage() {
     await supabase.auth.signOut();
     setSession(null);
     setMe(null);
+    setImprovement(null);
   };
 
   const checkout = async () => {
@@ -171,16 +169,15 @@ export default function ImprovePage() {
                 Pro Access
               </div>
             ) : (
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#ecfdf5", color: "#16a34a", border: "1px solid #6ee7b7", padding: "6px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, marginBottom: 14 }}>
-                ✦ First analysis free
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#fef3c7", color: "#b45309", border: "1px solid #fcd34d", padding: "6px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, marginBottom: 14 }}>
+                Pro required for analysis
               </div>
             )}
             <h1 style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)", fontWeight: 700, color: "#111", marginBottom: 8, lineHeight: 1.2, letterSpacing: "-0.5px" }}>
               Resume Editor & Analyzer
             </h1>
             <p style={{ color: "#666", fontSize: 15, lineHeight: 1.6, maxWidth: 640 }}>
-              Upload your resume for AI-powered line-by-line improvements, ATS score, and peer benchmarks.{" "}
-              <span style={{ color: "#16a34a", fontWeight: 600 }}>First analysis is free.</span>
+              Upload your resume for AI-powered line-by-line improvements, ATS score, and peer benchmarks. Unlock Pro to run analysis.
             </p>
           </div>
           {session ? (
@@ -212,31 +209,27 @@ export default function ImprovePage() {
                   <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                 </svg>
               </div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#ecfdf5", color: "#16a34a", border: "1px solid #6ee7b7", padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, margin: "0 auto 12px" }}>
-                ✦ First analysis is free
-              </div>
               <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111", marginBottom: 8, textAlign: "center" }}>Resume Analyzer</h2>
               <p style={{ color: "#666", fontSize: 14, lineHeight: 1.6, textAlign: "center", marginBottom: 24 }}>
-                Sign in to get AI-powered improvements — your first full analysis is on us.
+                Sign in to unlock Pro and run AI-powered resume analysis.
               </p>
 
               <div style={{ display: "grid", gap: 14, marginBottom: 24 }}>
                 {[
-                  { title: "Line-by-Line Fixes", desc: "Specific changes to each weak point in your resume", icon: "M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z", free: true },
-                  { title: "ATS Score", desc: "See how your resume scores on applicant tracking systems", icon: "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2", free: true },
-                  { title: "Peer Comparison", desc: "See how you stack up against top resumes in your industry", icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 1 0 8 4 4 0 0 1 0-8z", free: true },
-                  { title: "Better Phrases", desc: "Copy-paste templates to instantly improve your bullets", icon: "M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4", free: true },
-                  { title: "Action Plan", desc: "Personalized roadmap to lower your cooked risk score", icon: "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2", free: true },
-                  { title: "Unlimited Re-analyses", desc: "Keep uploading and improving with a Pro pass", icon: "M1 4v6h6M23 20v-6h-6M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15", free: false },
+                  { title: "Line-by-Line Fixes", desc: "Specific changes to each weak point in your resume", icon: "M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" },
+                  { title: "ATS Score", desc: "See how your resume scores on applicant tracking systems", icon: "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" },
+                  { title: "Peer Comparison", desc: "See how you stack up against top resumes in your industry", icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 1 0 8 4 4 0 0 1 0-8z" },
+                  { title: "Better Phrases", desc: "Copy-paste templates to instantly improve your bullets", icon: "M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" },
+                  { title: "Action Plan", desc: "Personalized roadmap to lower your cooked risk score", icon: "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" },
+                  { title: "Unlimited Re-analyses", desc: "Keep uploading and improving with a Pro pass", icon: "M1 4v6h6M23 20v-6h-6M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" },
                 ].map((f) => (
                   <div key={f.title} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: f.free ? "#f0fdf4" : "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={f.free ? "#16a34a" : "#999"} strokeWidth="2"><path d={f.icon}/></svg>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2"><path d={f.icon}/></svg>
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
                         <span style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>{f.title}</span>
-                        {f.free && <span style={{ fontSize: 10, fontWeight: 700, color: "#16a34a", background: "#ecfdf5", padding: "1px 6px", borderRadius: 4 }}>FREE</span>}
                       </div>
                       <div style={{ fontSize: 12, color: "#666" }}>{f.desc}</div>
                     </div>
@@ -246,20 +239,17 @@ export default function ImprovePage() {
 
               <button type="button" onClick={signIn} className="btn-primary" style={{ fontSize: 14, width: "100%", justifyContent: "center", display: "flex", gap: 8, padding: "14px 24px" }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/></svg>
-                Sign in — first analysis free
+                Sign in with Google
               </button>
-              <p style={{ textAlign: "center", fontSize: 11, color: "#999", marginTop: 10 }}>
-                No card required for your first analysis.
-              </p>
             </div>
           </section>
-        ) : !me?.hasPaid && me?.freeUsed && !improvement ? (
+        ) : !me?.hasPaid && !improvement ? (
           <section style={{ maxWidth: 600, margin: "0 auto" }}>
             <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", borderRadius: 20, padding: "clamp(16px, 4vw, 32px)", marginBottom: 24, color: "white", textAlign: "center" }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1, opacity: 0.85, marginBottom: 8 }}>FREE ANALYSIS USED</div>
-              <h2 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 700, marginBottom: 8 }}>Unlock Unlimited Re-analyses</h2>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1, opacity: 0.85, marginBottom: 8 }}>PRO ANALYSIS</div>
+              <h2 style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 700, marginBottom: 8 }}>Unlock Resume Analysis</h2>
               <p style={{ fontSize: 14, opacity: 0.9, lineHeight: 1.6 }}>
-                You've used your free analysis. Get unlimited re-runs as you improve your resume — one payment, forever.
+                Run AI improvements, ATS scoring, and peer benchmarks — one payment, unlimited re-analyses.
               </p>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 20 }}>
                 <span style={{ fontSize: "clamp(28px, 6vw, 36px)", fontWeight: 700 }}>$3</span>
@@ -317,11 +307,11 @@ export default function ImprovePage() {
           </section>
         ) : session?.access_token ? (
           <>
-            {!me?.hasPaid && me?.freeUsed && improvement && (
+            {!me?.hasPaid && improvement && (
               <div style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", borderRadius: 14, padding: "16px 20px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
                 <div style={{ color: "white" }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>Your free analysis — read-only</div>
-                  <div style={{ fontSize: 13, opacity: 0.85 }}>Unlock $3 lifetime access to re-analyze as you improve your resume.</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>Saved analysis — read-only</div>
+                  <div style={{ fontSize: 13, opacity: 0.85 }}>Unlock $3 lifetime access to run new analyses as you improve your resume.</div>
                 </div>
                 <button type="button" onClick={checkout} disabled={checkingOut} style={{ background: "white", color: "#667eea", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: checkingOut ? "wait" : "pointer", whiteSpace: "nowrap" }}>
                   {checkingOut ? "Opening..." : "Unlock — $3 lifetime"}
@@ -335,8 +325,8 @@ export default function ImprovePage() {
               onResumeChange={setResumeText}
               improvement={improvement}
               generating={generating}
-              onGenerate={!me?.hasPaid && me?.freeUsed ? checkout : generate}
-              paywalled={!me?.hasPaid && me?.freeUsed}
+              onGenerate={me?.hasPaid ? generate : checkout}
+              paywalled={!me?.hasPaid}
             />
           </>
         ) : null}

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthedUser, unauthorized } from "../../../lib/authServer";
-import { hasUsedFreeImprovement } from "../../../lib/paidAccess";
 import { createSupabaseServiceClient } from "../../../lib/supabaseServer";
 
 export const runtime = "nodejs";
@@ -17,7 +16,6 @@ export async function GET(req: NextRequest) {
     .maybeSingle();
 
   const hasPaid = data?.status === "active";
-  const freeUsed = hasPaid ? false : await hasUsedFreeImprovement(auth.user.id);
   return NextResponse.json({
     user: {
       id: auth.user.id,
@@ -25,7 +23,6 @@ export async function GET(req: NextRequest) {
       name: auth.user.user_metadata?.full_name ?? auth.user.user_metadata?.name ?? null,
     },
     hasPaid,
-    freeUsed,
     entitlement: data ?? null,
   });
 }
